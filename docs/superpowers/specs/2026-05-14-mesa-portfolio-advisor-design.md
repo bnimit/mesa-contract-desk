@@ -86,28 +86,70 @@ Each agent writes a markdown file alongside the modified portfolio explaining:
 - Key data points that drove the decision
 - Confidence level (high/medium/low) for each recommendation
 
+### Agent Trade Constraints
+
+All agents must follow these rules when proposing changes:
+- **Max spend per trade:** 30% of available cash
+- **Max sell per position:** 50% of shares held (no full liquidations)
+- **Ticker universe:** Only trade tickers already in the portfolio (no new stocks)
+- **Cash floor:** Must keep at least $500 cash after all proposed trades
+- These constraints are passed to the Claude prompt for each agent and validated server-side before writing to the branch
+
 ## User Flow
 
 1. User opens the app and sees the current portfolio with live prices
 2. User clicks "Run Analysis"
 3. Backend creates three Mesa branches from `main` and kicks off all agents in parallel
 4. UI shows a loading state with progress per agent
-5. When all agents complete, the dashboard shows three columns side-by-side:
+5. When agents complete, the dashboard shows three columns side-by-side:
    - Agent name and strategy summary
    - Proposed changes (buy X, sell Y, hold Z) with reasoning
-   - Projected portfolio value after changes
+   - New portfolio market value: sum of (shares × current price) + remaining cash
 6. User clicks "Accept" on one agent's proposal
-7. Backend merges that agent branch into `main`
+7. Backend merges that agent branch into `main` and deletes all three agent branches
 8. Portfolio updates and the cycle can repeat
+
+### Error Handling
+
+- If one agent fails (API error, timeout, invalid proposal), the other two still display normally. The failed agent's column shows an error message with a "Retry" button.
+- If market data is unavailable, show a banner and offer to run agents with the last-known cached prices.
+- If all three agents fail, show a single error screen with a "Retry All" button.
+
+### Branch Lifecycle
+
+- Branch names are timestamped to avoid collisions: `agent/fundamentals-{unix_timestamp}`
+- After a merge (or if the user dismisses all proposals), all three agent branches from that round are deleted
+- On the next "Run Analysis," fresh branches are created from the current `main`
+
+## Step Zero: SDK Spike
+
+Before building anything, validate that the Mesa SDK works as expected:
+
+1. Install `@mesadev/sdk` and confirm it exists / is usable
+2. Create a Mesa repo, write a file, read it back
+3. Create a branch, write to it, merge it back to main
+4. Confirm concurrent branch writes don't conflict
+
+If the SDK doesn't support these operations, re-evaluate the architecture (fallback: use plain Git with libgit2/isomorphic-git as the branching layer, and document what Mesa *would* improve).
 
 ## Tech Stack
 
 - **Frontend:** React + Vite
 - **Backend:** Node.js + Express
 - **AI:** Claude API (Haiku for speed/cost, Sonnet for quality — configurable)
-- **Market data:** Yahoo Finance API (free, no API key required)
+- **Market data:** `yahoo-finance2` npm package (primary), with Alpha Vantage free tier as fallback (requires API key). If both are unavailable, fall back to bundled sample data so the demo always works.
 - **Versioned storage:** Mesa SDK (`@mesadev/sdk`)
 - **Styling:** Tailwind CSS
+
+## Configuration
+
+Required environment variables (`.env` file, gitignored):
+
+```
+ANTHROPIC_API_KEY=sk-...          # Claude API key (required)
+MESA_API_KEY=...                  # Mesa SDK key (required, get from mesa.dev)
+ALPHA_VANTAGE_API_KEY=...         # Fallback market data (optional)
+```
 
 ## API Endpoints
 
