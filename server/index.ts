@@ -1,5 +1,3 @@
-import dotenv from "dotenv";
-dotenv.config({ override: true });
 import express from "express";
 import cors from "cors";
 import { mesa } from "./services/mesa.js";
