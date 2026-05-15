@@ -1,11 +1,9 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import { mesa } from "./services/mesa.js";
 import { apiRouter } from "./routes/api.js";
 import type { Portfolio } from "../shared/types.js";
-
-dotenv.config();
 
 const app = express();
 const PORT = 3001;
