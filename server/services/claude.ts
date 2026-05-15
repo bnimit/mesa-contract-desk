@@ -38,12 +38,17 @@ export interface AgentOutput {
   strategy: string;
 }
 
-const CONSTRAINTS_BLOCK = `TRADE CONSTRAINTS (you MUST follow these):
+const CONSTRAINTS_BLOCK = `TRADE CONSTRAINTS:
 - Max spend per trade: 30% of available cash
 - Max sell per position: 50% of shares held
 - Only trade tickers already in the portfolio
 - Must keep at least $500 cash after all trades
-- Return actions as JSON array`;
+
+YOUR JOB:
+You are competing against two other agents who use different lenses. Your job is to take a clear stand from YOUR specific perspective — not to play it safe.
+- You MUST propose at least ONE buy and/or ONE sell action. "Hold everything" is not a valid response.
+- Pick the stock that, through YOUR lens, has the strongest buy or sell signal — and act on it decisively.
+- Don't recommend the most consensus-safe move. Recommend the move that best reflects YOUR specialty.`;
 
 export async function runAgentPrompt(input: AgentInput): Promise<AgentOutput> {
   const response = await getClient().messages.create({
@@ -62,13 +67,13 @@ ${input.marketData}
 
 ${CONSTRAINTS_BLOCK}
 
-Analyze the portfolio and propose trades. Respond with ONLY valid JSON in this exact format:
+Respond with ONLY valid JSON in this exact format:
 {
-  "strategy": "one sentence summary of your approach",
+  "strategy": "one sentence summary of your approach, written in first person from your specialty's perspective",
   "actions": [
-    { "ticker": "AAPL", "action": "buy|sell|hold", "shares": 5, "reason": "why", "confidence": "high|medium|low" }
+    { "ticker": "AAPL", "action": "buy|sell|hold", "shares": 5, "reason": "why, using YOUR specialty's vocabulary", "confidence": "high|medium|low" }
   ],
-  "reasoning": "2-3 paragraph explanation of your analysis"
+  "reasoning": "2-3 paragraph explanation that strongly reflects YOUR specialty — use the language and reasoning style of YOUR field, not generic financial advice"
 }`,
       },
     ],
