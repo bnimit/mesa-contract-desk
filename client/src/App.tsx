@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   usePortfolio,
   useAnalysis,
@@ -23,6 +23,15 @@ export default function App() {
 
   const { state, analyze, merge, dismiss } = useAnalysis(onComplete);
   const [settingsOpen, setSettingsOpen] = useState(false);
+
+  // Belt-and-suspenders: whenever the analysis transitions to done or idle
+  // (i.e. after analyze, merge, or dismiss), refetch history. Avoids relying
+  // solely on the callback firing in time.
+  useEffect(() => {
+    if (state.status === "done" || state.status === "idle") {
+      refreshHistory();
+    }
+  }, [state.status, refreshHistory]);
 
   const allBranches = state.status === "done" ? state.results.map((r) => r.branch) : [];
 

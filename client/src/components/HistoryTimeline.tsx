@@ -1,16 +1,10 @@
 import type { HistoryRoundSummary } from "../types.js";
 
-const AGENT_COLORS: Record<string, string> = {
-  Fundamentals: "text-fundamentals",
-  Sentiment: "text-sentiment",
-  Technical: "text-technical",
-};
-
-const AGENT_SIGILS: Record<string, string> = {
-  Fundamentals: "◆",
-  Sentiment: "●",
-  Technical: "▲",
-};
+const AGENT_ORDER: { name: string; sigil: string; color: string }[] = [
+  { name: "Fundamentals", sigil: "◆", color: "text-fundamentals" },
+  { name: "Sentiment", sigil: "●", color: "text-sentiment" },
+  { name: "Technical", sigil: "▲", color: "text-technical" },
+];
 
 function formatTime(ts: number): string {
   const d = new Date(ts);
@@ -19,8 +13,11 @@ function formatTime(ts: number): string {
   if (sameDay) {
     return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false });
   }
-  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " · " +
-    d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false });
+  return (
+    d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
+    " · " +
+    d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false })
+  );
 }
 
 export function HistoryTimeline({ rounds }: { rounds: HistoryRoundSummary[] }) {
@@ -41,7 +38,9 @@ export function HistoryTimeline({ rounds }: { rounds: HistoryRoundSummary[] }) {
   return (
     <section className="reveal">
       <header className="mb-8 pb-6 border-b border-line">
-        <div className="section-label mb-2">Mesa history · {rounds.length} round{rounds.length === 1 ? "" : "s"}</div>
+        <div className="section-label mb-2">
+          Mesa history · {rounds.length} round{rounds.length === 1 ? "" : "s"}
+        </div>
         <h2 className="display-heading text-3xl">Past rounds</h2>
         <p className="serif-quote text-lg text-mute mt-3 max-w-2xl">
           Every analysis is preserved as a commit on Mesa's main branch. Agents read their own history on each run to learn from what worked and what didn't.
@@ -49,6 +48,21 @@ export function HistoryTimeline({ rounds }: { rounds: HistoryRoundSummary[] }) {
       </header>
 
       <div className="font-mono text-sm">
+        {/* Column headers */}
+        <div className="grid grid-cols-12 gap-6 pb-3 border-b border-line section-label">
+          <div className="col-span-12 md:col-span-2">When</div>
+          <div className="col-span-12 md:col-span-8 grid grid-cols-3 gap-3">
+            {AGENT_ORDER.map((a) => (
+              <div key={a.name} className="flex items-center gap-2">
+                <span className={a.color}>{a.sigil}</span>
+                <span>{a.name}</span>
+              </div>
+            ))}
+          </div>
+          <div className="col-span-12 md:col-span-2 text-right">Outcome</div>
+        </div>
+
+        {/* Rows */}
         {rounds.map((round, i) => (
           <div
             key={round.timestamp}
@@ -60,18 +74,20 @@ export function HistoryTimeline({ rounds }: { rounds: HistoryRoundSummary[] }) {
             </div>
 
             <div className="col-span-12 md:col-span-8 grid grid-cols-3 gap-3">
-              {round.agents.map((agent) => {
-                const color = AGENT_COLORS[agent.name] ?? "text-mute";
-                const sigil = AGENT_SIGILS[agent.name] ?? "◇";
+              {AGENT_ORDER.map((slot) => {
+                const agent = round.agents.find((a) => a.name === slot.name);
+                if (!agent) {
+                  return (
+                    <div key={slot.name} className="text-mute-2 text-xs italic">
+                      —
+                    </div>
+                  );
+                }
+                const dim = !agent.merged && round.mergedAgent ? "opacity-40" : "";
                 return (
-                  <div
-                    key={agent.name}
-                    className={`flex items-baseline gap-2 ${
-                      agent.merged ? "" : round.mergedAgent ? "opacity-40" : ""
-                    }`}
-                  >
-                    <span className={color}>{sigil}</span>
-                    <span className={`${color} text-xs`}>{agent.action}</span>
+                  <div key={slot.name} className={`flex items-baseline gap-2 ${dim}`}>
+                    <span className={slot.color}>{slot.sigil}</span>
+                    <span className={`${slot.color} text-xs`}>{agent.action}</span>
                     {agent.merged && (
                       <span className="text-[10px] tracking-widest uppercase text-mesa ml-1">
                         ← merged
