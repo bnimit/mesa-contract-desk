@@ -9,21 +9,37 @@ interface ComparisonViewProps {
 
 export function ComparisonView({ results, onAccept, onDismiss }: ComparisonViewProps) {
   return (
-    <div className="mt-8">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Agent Proposals</h2>
+    <section className="reveal">
+      <header className="flex items-end justify-between mb-8 pb-6 border-b border-line">
+        <div>
+          <div className="section-label mb-2">Three branches · independent agents</div>
+          <h2 className="display-heading text-3xl">
+            Strategy proposals
+          </h2>
+          <p className="serif-quote text-lg text-mute mt-3 max-w-xl">
+            Each agent worked on an isolated Mesa branch. Choose one to merge into <span className="font-mono not-italic text-ink-2">main</span>.
+          </p>
+        </div>
         <button
           onClick={onDismiss}
-          className="text-sm text-gray-500 hover:text-gray-700 underline"
+          className="group flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-mute hover:text-ink transition-colors"
         >
-          Dismiss All
+          <span>Discard all</span>
+          <span className="group-hover:translate-x-0.5 transition-transform">→</span>
         </button>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {results.map((r) => (
-          <AgentCard key={r.agentName} result={r} onAccept={() => onAccept(r.branch)} />
+      </header>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 border-t border-line">
+        {results.map((r, i) => (
+          <div
+            key={r.agentName}
+            className="border-b border-r last:border-r-0 border-line reveal lg:border-b-0"
+            style={{ animationDelay: `${0.2 + i * 0.1}s` }}
+          >
+            <AgentCard result={r} onAccept={() => onAccept(r.branch)} />
+          </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
