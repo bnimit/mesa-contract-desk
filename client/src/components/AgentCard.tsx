@@ -157,10 +157,38 @@ export function AgentCard({ result, onAccept }: AgentCardProps) {
       </div>
 
       <div className="mt-auto">
-        <div className="border-t border-line pt-4 mb-6 flex items-baseline justify-between">
-          <div className="section-label">Projected value</div>
-          <div className="font-mono tabular text-xl text-ink">
-            ${proposal.newMarketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        <div className="border-t border-line pt-4 mb-6">
+          <div className="flex items-baseline justify-between mb-2">
+            <div className="section-label">Cash after trades</div>
+            <div className="font-mono tabular text-xl text-ink">
+              ${proposal.cashAfter.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+          </div>
+          <div className="flex items-baseline justify-between text-xs">
+            <span className="text-mute font-mono">
+              {proposal.cashDelta === 0 ? (
+                "no change · holds maintain position"
+              ) : (
+                <>
+                  was ${proposal.cashBefore.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </>
+              )}
+            </span>
+            {proposal.cashDelta !== 0 && (
+              <span
+                className={`font-mono tabular ${
+                  proposal.cashDelta > 0 ? "text-up" : "text-down"
+                }`}
+              >
+                {proposal.cashDelta > 0 ? "+" : ""}${proposal.cashDelta.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            )}
+          </div>
+          <div className="mt-3 pt-3 border-t border-line/60 flex items-baseline justify-between text-xs text-mute">
+            <span className="font-mono">Total portfolio value</span>
+            <span className="font-mono tabular text-ink-2">
+              ${proposal.newMarketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
           </div>
         </div>
 

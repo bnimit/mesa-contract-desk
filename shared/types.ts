@@ -25,6 +25,9 @@ export interface AgentProposal {
   proposedPortfolio: Portfolio;
   reasoning: string;
   newMarketValue: number;
+  cashBefore: number;
+  cashAfter: number;
+  cashDelta: number;
   memory?: AgentMemory;
   playbookEntry?: string;
 }
