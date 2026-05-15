@@ -25,12 +25,25 @@ export interface AgentProposal {
   proposedPortfolio: Portfolio;
   reasoning: string;
   newMarketValue: number;
+  memory?: AgentMemory;
 }
 
-export interface AnalysisRound {
+export interface AgentMemory {
+  reviewed: number;
+  correct: number;
+  wrong: number;
+  records: PastPredictionRecord[];
+}
+
+export interface PastPredictionRecord {
   timestamp: number;
-  branches: string[];
-  proposals: AgentResult[];
+  ticker: string;
+  action: "buy" | "sell" | "hold";
+  shares: number;
+  priceWhenPredicted: number;
+  currentPrice: number;
+  changePercent: number;
+  outcome: "correct" | "wrong" | "pending";
 }
 
 export interface AgentResult {
@@ -39,6 +52,21 @@ export interface AgentResult {
   status: "success" | "error";
   proposal?: AgentProposal;
   error?: string;
+}
+
+export interface AnalysisRound {
+  timestamp: number;
+  branches: string[];
+  results: AgentResult[];
+  mergedAgent?: string;
+}
+
+export interface StorageBackend {
+  name: string;
+  label: string;
+  description: string;
+  available: boolean;
+  active: boolean;
 }
 
 export interface MarketQuote {

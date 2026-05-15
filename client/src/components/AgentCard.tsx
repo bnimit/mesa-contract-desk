@@ -76,9 +76,31 @@ export function AgentCard({ result, onAccept }: AgentCardProps) {
         </div>
       </header>
 
-      <blockquote className="serif-quote text-lg leading-snug text-ink-2 mb-8 pl-4 border-l-2 border-line-2">
+      <blockquote className="serif-quote text-lg leading-snug text-ink-2 mb-6 pl-4 border-l-2 border-line-2">
         "{proposal.strategy}"
       </blockquote>
+
+      {proposal.memory && proposal.memory.reviewed > 0 && (
+        <div className="mb-6 border border-line p-3 bg-canvas-2/40">
+          <div className="section-label mb-1.5 flex items-center gap-2">
+            <span className="text-mesa">◇</span>
+            <span>Memory · Mesa history</span>
+          </div>
+          <div className="font-mono text-xs text-ink-2 leading-relaxed">
+            Reviewed{" "}
+            <span className="text-ink">{proposal.memory.reviewed}</span> past prediction
+            {proposal.memory.reviewed === 1 ? "" : "s"}
+            {proposal.memory.correct + proposal.memory.wrong > 0 && (
+              <>
+                {" · "}
+                <span className="text-up">{proposal.memory.correct} correct</span>
+                {" · "}
+                <span className="text-down">{proposal.memory.wrong} wrong</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 mb-8">
         <div className="section-label mb-4">Proposed trades</div>

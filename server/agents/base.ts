@@ -1,6 +1,7 @@
 import { mesa } from "../services/mesa.js";
 import { runAgentPrompt, type AgentInput } from "../services/claude.js";
 import { validateProposal, applyActions } from "../validators/trade.js";
+import { readAgentMemory, memoryBlock } from "../services/memory.js";
 import type { Portfolio, AgentResult } from "../../shared/types.js";
 
 export interface AgentConfig {
@@ -20,12 +21,14 @@ export async function runAgent(
     const tickers = portfolio.portfolio.map((h) => h.ticker);
 
     const marketData = await config.fetchMarketData(tickers);
+    const memory = await readAgentMemory(config.name, currentPrices);
 
     const input: AgentInput = {
       portfolio,
       marketData,
       agentRole: config.role,
       constraints: "",
+      memoryBlock: memoryBlock(memory),
     };
 
     const output = await runAgentPrompt(input);
@@ -59,6 +62,7 @@ export async function runAgent(
         proposedPortfolio,
         reasoning: output.reasoning,
         newMarketValue,
+        memory,
       },
     };
   } catch (error) {

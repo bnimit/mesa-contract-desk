@@ -30,6 +30,7 @@ export interface AgentInput {
   marketData: string;
   agentRole: string;
   constraints: string;
+  memoryBlock?: string;
 }
 
 export interface AgentOutput {
@@ -64,6 +65,8 @@ ${JSON.stringify(input.portfolio, null, 2)}
 
 MARKET DATA:
 ${input.marketData}
+
+${input.memoryBlock ?? ""}
 
 ${CONSTRAINTS_BLOCK}
 

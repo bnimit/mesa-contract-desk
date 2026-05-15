@@ -5,9 +5,14 @@ import { runAgent } from "../agents/base.js";
 import { fundamentalsAgent } from "../agents/fundamentals.js";
 import { sentimentAgent } from "../agents/sentiment.js";
 import { technicalAgent } from "../agents/technical.js";
-import type { Portfolio } from "../../shared/types.js";
+import { saveRoundSnapshot, listHistoryRounds } from "../services/memory.js";
+import type { Portfolio, AnalysisRound, StorageBackend } from "../../shared/types.js";
 
 export const apiRouter = Router();
+
+// In-memory cache of the most recent round so /merge and /dismiss can record the outcome
+let lastRound: AnalysisRound | null = null;
+let lastPriceMap: Map<string, number> | null = null;
 
 apiRouter.get("/portfolio", async (_req, res) => {
   try {
@@ -56,8 +61,21 @@ apiRouter.post("/analyze", async (_req, res) => {
       agents.map((a) => runAgent(a.config, a.branch, currentPrices))
     );
 
+    const round: AnalysisRound = {
+      timestamp,
+      branches: agents.map((a) => a.branch),
+      results,
+    };
+
+    // Save snapshot immediately so even dismissed rounds are part of the agent's memory.
+    await saveRoundSnapshot(round, currentPrices);
+
+    lastRound = round;
+    lastPriceMap = currentPrices;
+
     res.json({ timestamp, results });
   } catch (error) {
+    console.error("Analysis failed:", error);
     res.status(500).json({ error: "Analysis failed" });
   }
 });
@@ -71,6 +89,13 @@ apiRouter.post("/merge", async (req, res) => {
     }
 
     await mesa.mergeBranch(branch, "main");
+
+    // Update the saved snapshot to record which agent's branch was merged.
+    if (lastRound && lastRound.branches.includes(branch) && lastPriceMap) {
+      const mergedResult = lastRound.results.find((r) => r.branch === branch);
+      lastRound.mergedAgent = mergedResult?.agentName;
+      await saveRoundSnapshot(lastRound, lastPriceMap);
+    }
 
     for (const b of allBranches) {
       try {
@@ -101,4 +126,48 @@ apiRouter.post("/dismiss", async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: "Dismiss failed" });
   }
+});
+
+apiRouter.get("/history", async (_req, res) => {
+  try {
+    const portfolioRaw = await mesa.readFile("main", "portfolio.json");
+    const portfolio: Portfolio = JSON.parse(portfolioRaw);
+    const tickers = portfolio.portfolio.map((h) => h.ticker);
+    const quotes = await getQuotes(tickers);
+    const currentPrices = new Map<string, number>();
+    for (const [ticker, quote] of quotes) {
+      currentPrices.set(ticker, quote.price);
+    }
+
+    const rounds = await listHistoryRounds(currentPrices);
+    res.json({ rounds });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to load history" });
+  }
+});
+
+apiRouter.get("/settings", async (_req, res) => {
+  const active = mesa.backendName();
+  const hasMesaKey = !!process.env.MESA_API_KEY && process.env.MESA_API_KEY.length > 0;
+
+  const backends: StorageBackend[] = [
+    {
+      name: "local-fs",
+      label: "Local filesystem",
+      description:
+        "Branches and history live in a directory on disk. Fully functional. Used as the development fallback.",
+      available: true,
+      active: active === "local-fs",
+    },
+    {
+      name: "mesa-sdk",
+      label: "Mesa SDK · api.mesa.dev",
+      description:
+        "Real branches on Mesa's versioned filesystem. Requires MESA_API_KEY in .env. Requested early access — not yet enabled.",
+      available: hasMesaKey,
+      active: active === "mesa-sdk",
+    },
+  ];
+
+  res.json({ backends });
 });

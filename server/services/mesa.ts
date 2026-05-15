@@ -7,10 +7,12 @@ export interface MesaService {
   init(): Promise<void>;
   readFile(branch: string, filePath: string): Promise<string>;
   writeFile(branch: string, filePath: string, content: string): Promise<void>;
+  listFiles(branch: string, dir: string): Promise<string[]>;
   createBranch(branchName: string, fromBranch: string): Promise<void>;
   mergeBranch(branchName: string, intoBranch: string): Promise<void>;
   deleteBranch(branchName: string): Promise<void>;
   listCommits(branch: string, limit: number): Promise<{ hash: string; message: string; timestamp: number }[]>;
+  backendName(): string;
 }
 
 class LocalFsMesa implements MesaService {
@@ -30,6 +32,20 @@ class LocalFsMesa implements MesaService {
     const fullPath = path.join(this.branchDir(branch), filePath);
     await fs.mkdir(path.dirname(fullPath), { recursive: true });
     await fs.writeFile(fullPath, content, "utf-8");
+  }
+
+  async listFiles(branch: string, dir: string) {
+    const fullPath = path.join(this.branchDir(branch), dir);
+    try {
+      const entries = await fs.readdir(fullPath);
+      return entries.sort();
+    } catch {
+      return [];
+    }
+  }
+
+  backendName() {
+    return "local-fs";
   }
 
   async createBranch(branchName: string, fromBranch: string) {

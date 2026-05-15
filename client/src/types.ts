@@ -1,4 +1,14 @@
-export type { Portfolio, Holding, TradeAction, AgentProposal, AgentResult, MarketQuote } from "@shared/types.js";
+export type {
+  Portfolio,
+  Holding,
+  TradeAction,
+  AgentProposal,
+  AgentResult,
+  AgentMemory,
+  PastPredictionRecord,
+  MarketQuote,
+  StorageBackend,
+} from "@shared/types.js";
 
 export interface PortfolioWithPrices {
   portfolio: (import("@shared/types.js").Holding & { currentPrice: number; name: string })[];
@@ -12,3 +22,9 @@ export type AnalysisState =
   | { status: "loading" }
   | { status: "done"; timestamp: number; results: import("@shared/types.js").AgentResult[] }
   | { status: "error"; message: string };
+
+export interface HistoryRoundSummary {
+  timestamp: number;
+  agents: { name: string; action: string; merged: boolean }[];
+  mergedAgent?: string;
+}
