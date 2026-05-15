@@ -172,7 +172,7 @@ export function AgentCard({ result, onAccept }: AgentCardProps) {
           className="group/btn w-full flex items-center justify-between gap-3 px-5 py-4 bg-ink text-canvas hover:bg-mesa transition-colors"
         >
           <span className="font-mono text-xs tracking-widest uppercase">
-            Merge to main
+            Choose strategy
           </span>
           <span className="font-mono text-base group-hover/btn:translate-x-1 transition-transform">
             →
