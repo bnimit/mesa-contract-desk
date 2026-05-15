@@ -36,7 +36,7 @@ export function AgentCard({ result, onAccept }: AgentCardProps) {
 
   if (result.status === "error") {
     return (
-      <article className="bg-canvas border border-line p-8 flex flex-col">
+      <article className="bg-canvas border border-line p-8 flex flex-col w-full">
         <header className="flex items-center gap-3 mb-6">
           <span className={`text-2xl ${meta.color}`}>{meta.sigil}</span>
           <div>
@@ -55,7 +55,7 @@ export function AgentCard({ result, onAccept }: AgentCardProps) {
   const branchLabel = result.branch.replace(/^agent\//, "");
 
   return (
-    <article className="bg-canvas border border-line p-8 flex flex-col group hover:border-ink/30 transition-colors">
+    <article className="bg-canvas border border-line p-8 flex flex-col w-full group hover:border-ink/30 transition-colors">
       <header className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -127,34 +127,36 @@ export function AgentCard({ result, onAccept }: AgentCardProps) {
         </div>
       </div>
 
-      <div className="border-t border-line pt-4 mb-6 flex items-baseline justify-between">
-        <div className="section-label">Projected value</div>
-        <div className="font-mono tabular text-xl text-ink">
-          ${proposal.newMarketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      <div className="mt-auto">
+        <div className="border-t border-line pt-4 mb-6 flex items-baseline justify-between">
+          <div className="section-label">Projected value</div>
+          <div className="font-mono tabular text-xl text-ink">
+            ${proposal.newMarketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
         </div>
+
+        <details className="mb-6 group/details">
+          <summary className="section-label cursor-pointer hover:text-ink transition-colors flex items-center gap-2">
+            <span>Reasoning</span>
+            <span className="text-mute-2 group-open/details:rotate-90 transition-transform">›</span>
+          </summary>
+          <p className="serif-quote text-sm text-ink-2 leading-relaxed mt-3 pl-4 border-l border-line">
+            {proposal.reasoning}
+          </p>
+        </details>
+
+        <button
+          onClick={onAccept}
+          className="group/btn w-full flex items-center justify-between gap-3 px-5 py-4 bg-ink text-canvas hover:bg-mesa transition-colors"
+        >
+          <span className="font-mono text-xs tracking-widest uppercase">
+            Merge to main
+          </span>
+          <span className="font-mono text-base group-hover/btn:translate-x-1 transition-transform">
+            →
+          </span>
+        </button>
       </div>
-
-      <details className="mb-6 group/details">
-        <summary className="section-label cursor-pointer hover:text-ink transition-colors flex items-center gap-2">
-          <span>Reasoning</span>
-          <span className="text-mute-2 group-open/details:rotate-90 transition-transform">›</span>
-        </summary>
-        <p className="serif-quote text-sm text-ink-2 leading-relaxed mt-3 pl-4 border-l border-line">
-          {proposal.reasoning}
-        </p>
-      </details>
-
-      <button
-        onClick={onAccept}
-        className="group/btn flex items-center justify-between gap-3 px-5 py-4 bg-ink text-canvas hover:bg-mesa transition-colors"
-      >
-        <span className="font-mono text-xs tracking-widest uppercase">
-          Merge to main
-        </span>
-        <span className="font-mono text-base group-hover/btn:translate-x-1 transition-transform">
-          →
-        </span>
-      </button>
     </article>
   );
 }

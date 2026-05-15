@@ -29,11 +29,11 @@ export function ComparisonView({ results, onAccept, onDismiss }: ComparisonViewP
         </button>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 border-t border-line">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 border-t border-line items-stretch">
         {results.map((r, i) => (
           <div
             key={r.agentName}
-            className="border-b border-r last:border-r-0 border-line reveal lg:border-b-0"
+            className="border-b border-r last:border-r-0 border-line reveal lg:border-b-0 flex"
             style={{ animationDelay: `${0.2 + i * 0.1}s` }}
           >
             <AgentCard result={r} onAccept={() => onAccept(r.branch)} />
