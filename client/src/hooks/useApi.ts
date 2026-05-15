@@ -44,6 +44,26 @@ export function useAnalysis(onComplete?: () => void) {
     }
   }, [onComplete]);
 
+  const replay = useCallback(
+    async (from: number) => {
+      setState({ status: "loading" });
+      try {
+        const res = await fetch("/api/replay", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ from }),
+        });
+        if (!res.ok) throw new Error("Replay failed");
+        const data = await res.json();
+        setState({ status: "done", timestamp: data.timestamp, results: data.results });
+        onComplete?.();
+      } catch (e) {
+        setState({ status: "error", message: e instanceof Error ? e.message : "Unknown error" });
+      }
+    },
+    [onComplete]
+  );
+
   const merge = useCallback(
     async (branch: string, allBranches: string[]) => {
       const res = await fetch("/api/merge", {
@@ -71,7 +91,31 @@ export function useAnalysis(onComplete?: () => void) {
     [onComplete]
   );
 
-  return { state, analyze, merge, dismiss };
+  return { state, analyze, replay, merge, dismiss };
+}
+
+export function usePlaybook(refreshKey: unknown) {
+  const [content, setContent] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/playbook");
+      const data = await res.json();
+      setContent(data.content ?? "");
+    } catch {
+      console.error("Failed to fetch playbook");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh, refreshKey]);
+
+  return { content, loading, refresh };
 }
 
 export function useHistory() {

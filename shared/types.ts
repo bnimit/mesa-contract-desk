@@ -26,6 +26,15 @@ export interface AgentProposal {
   reasoning: string;
   newMarketValue: number;
   memory?: AgentMemory;
+  playbookEntry?: string;
+}
+
+export interface PlaybookEntry {
+  agent: string;
+  round: number;
+  timestamp: number;
+  body: string;
+  raw: string;
 }
 
 export interface AgentMemory {
@@ -59,6 +68,7 @@ export interface AnalysisRound {
   branches: string[];
   results: AgentResult[];
   mergedAgent?: string;
+  replayedFrom?: number;
 }
 
 export interface StorageBackend {

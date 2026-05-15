@@ -1,4 +1,5 @@
 import type { AgentResult } from "../types.js";
+import { PlaybookDiff } from "./PlaybookDiff.js";
 
 interface AgentCardProps {
   result: AgentResult;
@@ -99,6 +100,12 @@ export function AgentCard({ result, onAccept }: AgentCardProps) {
               </>
             )}
           </div>
+        </div>
+      )}
+
+      {proposal.playbookEntry && (
+        <div className="mb-6">
+          <PlaybookDiff entry={proposal.playbookEntry} agentColor={meta.color} />
         </div>
       )}
 

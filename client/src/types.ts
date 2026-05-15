@@ -6,6 +6,7 @@ export type {
   AgentResult,
   AgentMemory,
   PastPredictionRecord,
+  PlaybookEntry,
   MarketQuote,
   StorageBackend,
 } from "@shared/types.js";
@@ -27,4 +28,5 @@ export interface HistoryRoundSummary {
   timestamp: number;
   agents: { name: string; action: string; merged: boolean }[];
   mergedAgent?: string;
+  replayedFrom?: number;
 }

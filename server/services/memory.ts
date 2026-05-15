@@ -98,6 +98,7 @@ interface StoredRound {
     };
   }[];
   mergedAgent?: string;
+  replayedFrom?: number;
 }
 
 export async function saveRoundSnapshot(round: AnalysisRound, currentPrices: Map<string, number>): Promise<void> {
@@ -105,6 +106,7 @@ export async function saveRoundSnapshot(round: AnalysisRound, currentPrices: Map
     timestamp: round.timestamp,
     snapshotPrices: Object.fromEntries(currentPrices),
     mergedAgent: round.mergedAgent,
+    replayedFrom: round.replayedFrom,
     results: round.results.map((r) => ({
       agentName: r.agentName,
       branch: r.branch,
@@ -154,6 +156,7 @@ export async function listHistoryRounds(currentPrices: Map<string, number>): Pro
         timestamp: round.timestamp,
         agents,
         mergedAgent: round.mergedAgent,
+        replayedFrom: round.replayedFrom,
       });
     } catch {
       // skip
@@ -167,4 +170,5 @@ export interface HistoryRoundSummary {
   timestamp: number;
   agents: { name: string; action: string; merged: boolean }[];
   mergedAgent?: string;
+  replayedFrom?: number;
 }

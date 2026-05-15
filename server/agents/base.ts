@@ -2,6 +2,7 @@ import { mesa } from "../services/mesa.js";
 import { runAgentPrompt, type AgentInput } from "../services/claude.js";
 import { validateProposal, applyActions } from "../validators/trade.js";
 import { readAgentMemory, memoryBlock } from "../services/memory.js";
+import { readPlaybook, appendEntry, nextRoundNumber } from "../services/playbook.js";
 import type { Portfolio, AgentResult } from "../../shared/types.js";
 
 export interface AgentConfig {
@@ -10,10 +11,15 @@ export interface AgentConfig {
   fetchMarketData: (tickers: string[]) => Promise<string>;
 }
 
+export interface RunContext {
+  timestamp: number;
+}
+
 export async function runAgent(
   config: AgentConfig,
   branchName: string,
-  currentPrices: Map<string, number>
+  currentPrices: Map<string, number>,
+  ctx: RunContext
 ): Promise<AgentResult> {
   try {
     const portfolioRaw = await mesa.readFile("main", "portfolio.json");
@@ -22,13 +28,19 @@ export async function runAgent(
 
     const marketData = await config.fetchMarketData(tickers);
     const memory = await readAgentMemory(config.name, currentPrices);
+    const playbookContents = await readPlaybook("main");
+    const nextRound = nextRoundNumber(playbookContents);
 
     const input: AgentInput = {
       portfolio,
       marketData,
       agentRole: config.role,
+      agentName: config.name,
       constraints: "",
       memoryBlock: memoryBlock(memory),
+      playbookContents,
+      nextRound,
+      timestamp: ctx.timestamp,
     };
 
     const output = await runAgentPrompt(input);
@@ -43,6 +55,10 @@ export async function runAgent(
 
     const proposedPortfolio = applyActions(portfolio, output.actions, currentPrices);
 
+    // Append this agent's playbook entry to its own branch.
+    await appendEntry(branchName, output.playbookEntry);
+
+    // Persist the proposed portfolio on the agent's branch.
     await mesa.writeFile(branchName, "portfolio.json", JSON.stringify(proposedPortfolio, null, 2));
     await mesa.writeFile(branchName, "reasoning.md", `# ${config.name} Analysis\n\n${output.reasoning}`);
 
@@ -63,6 +79,7 @@ export async function runAgent(
         reasoning: output.reasoning,
         newMarketValue,
         memory,
+        playbookEntry: output.playbookEntry,
       },
     };
   } catch (error) {

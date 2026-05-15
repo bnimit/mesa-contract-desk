@@ -1,5 +1,11 @@
 import type { HistoryRoundSummary } from "../types.js";
 
+interface HistoryTimelineProps {
+  rounds: HistoryRoundSummary[];
+  onReplay?: (timestamp: number) => void;
+  replayDisabled?: boolean;
+}
+
 const AGENT_ORDER: { name: string; sigil: string; color: string }[] = [
   { name: "Fundamentals", sigil: "◆", color: "text-fundamentals" },
   { name: "Sentiment", sigil: "●", color: "text-sentiment" },
@@ -20,7 +26,7 @@ function formatTime(ts: number): string {
   );
 }
 
-export function HistoryTimeline({ rounds }: { rounds: HistoryRoundSummary[] }) {
+export function HistoryTimeline({ rounds, onReplay, replayDisabled }: HistoryTimelineProps) {
   if (rounds.length === 0) {
     return (
       <section className="reveal">
@@ -51,7 +57,7 @@ export function HistoryTimeline({ rounds }: { rounds: HistoryRoundSummary[] }) {
         {/* Column headers */}
         <div className="grid grid-cols-12 gap-6 pb-3 border-b border-line section-label">
           <div className="col-span-12 md:col-span-2">When</div>
-          <div className="col-span-12 md:col-span-8 grid grid-cols-3 gap-3">
+          <div className="col-span-12 md:col-span-7 grid grid-cols-3 gap-3">
             {AGENT_ORDER.map((a) => (
               <div key={a.name} className="flex items-center gap-2">
                 <span className={a.color}>{a.sigil}</span>
@@ -60,6 +66,7 @@ export function HistoryTimeline({ rounds }: { rounds: HistoryRoundSummary[] }) {
             ))}
           </div>
           <div className="col-span-12 md:col-span-2 text-right">Outcome</div>
+          <div className="col-span-12 md:col-span-1 text-right">Replay</div>
         </div>
 
         {/* Rows */}
@@ -70,10 +77,15 @@ export function HistoryTimeline({ rounds }: { rounds: HistoryRoundSummary[] }) {
             style={{ animationDelay: `${0.05 * i}s` }}
           >
             <div className="col-span-12 md:col-span-2 text-mute">
-              {formatTime(round.timestamp)}
+              <div>{formatTime(round.timestamp)}</div>
+              {round.replayedFrom && (
+                <div className="text-[10px] text-mesa mt-0.5 uppercase tracking-widest">
+                  replay
+                </div>
+              )}
             </div>
 
-            <div className="col-span-12 md:col-span-8 grid grid-cols-3 gap-3">
+            <div className="col-span-12 md:col-span-7 grid grid-cols-3 gap-3">
               {AGENT_ORDER.map((slot) => {
                 const agent = round.agents.find((a) => a.name === slot.name);
                 if (!agent) {
@@ -105,6 +117,20 @@ export function HistoryTimeline({ rounds }: { rounds: HistoryRoundSummary[] }) {
                 </span>
               ) : (
                 <span>· dismissed</span>
+              )}
+            </div>
+
+            <div className="col-span-12 md:col-span-1 text-right">
+              {onReplay && (
+                <button
+                  onClick={() => onReplay(round.timestamp)}
+                  disabled={replayDisabled}
+                  title="Branch from this state and run a new analysis"
+                  className="group inline-flex items-center gap-1 text-[10px] uppercase tracking-widest text-mute hover:text-mesa transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <span>↺</span>
+                  <span>replay</span>
+                </button>
               )}
             </div>
           </div>

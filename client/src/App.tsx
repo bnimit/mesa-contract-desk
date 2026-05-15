@@ -4,32 +4,37 @@ import {
   useAnalysis,
   useHistory,
   useSettings,
+  usePlaybook,
 } from "./hooks/useApi.js";
 import { Portfolio } from "./components/Portfolio.js";
 import { ComparisonView } from "./components/ComparisonView.js";
 import { AnalysisLoading } from "./components/AnalysisLoading.js";
 import { SettingsPanel } from "./components/SettingsPanel.js";
 import { HistoryTimeline } from "./components/HistoryTimeline.js";
+import { PlaybookView } from "./components/PlaybookView.js";
 
 export default function App() {
   const { portfolio, loading, refresh: refreshPortfolio } = usePortfolio();
   const { rounds, refresh: refreshHistory } = useHistory();
   const { backends, loading: settingsLoading } = useSettings();
+  const [refreshKey, setRefreshKey] = useState(0);
+  const { content: playbookContent } = usePlaybook(refreshKey);
 
   const onComplete = useCallback(() => {
     refreshPortfolio();
     refreshHistory();
+    setRefreshKey((k) => k + 1);
   }, [refreshPortfolio, refreshHistory]);
 
-  const { state, analyze, merge, dismiss } = useAnalysis(onComplete);
+  const { state, analyze, replay, merge, dismiss } = useAnalysis(onComplete);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Belt-and-suspenders: whenever the analysis transitions to done or idle
-  // (i.e. after analyze, merge, or dismiss), refetch history. Avoids relying
-  // solely on the callback firing in time.
+  // (i.e. after analyze, merge, or dismiss), refetch history + playbook.
   useEffect(() => {
     if (state.status === "done" || state.status === "idle") {
       refreshHistory();
+      setRefreshKey((k) => k + 1);
     }
   }, [state.status, refreshHistory]);
 
@@ -92,7 +97,7 @@ export default function App() {
             </div>
             <div className="col-span-12 md:col-span-4">
               <p className="serif-quote text-lg leading-relaxed text-ink-2 mb-6">
-                Each AI agent forks the portfolio, analyses it through its own lens, and proposes trades on an isolated branch. Past predictions are read from Mesa history as cheap agent memory.
+                Each agent forks the portfolio, writes its observations to a shared <span className="font-mono not-italic text-ink">playbook.md</span>, and proposes trades on an isolated branch. Their accumulated reasoning lives on Mesa — pick a strategy, or replay any past round.
               </p>
               <button
                 onClick={analyze}
@@ -171,7 +176,23 @@ export default function App() {
             <div className="section-label mt-4">History</div>
           </aside>
           <div className="col-span-12 md:col-span-10">
-            <HistoryTimeline rounds={rounds} />
+            <HistoryTimeline
+              rounds={rounds}
+              onReplay={replay}
+              replayDisabled={state.status === "loading"}
+            />
+          </div>
+        </div>
+
+        {/* Section 04: Playbook */}
+        <div className="hairline mb-20" />
+        <div className="grid grid-cols-12 gap-8 mb-20">
+          <aside className="col-span-12 md:col-span-2">
+            <div className="section-number">04</div>
+            <div className="section-label mt-4">Playbook</div>
+          </aside>
+          <div className="col-span-12 md:col-span-10">
+            <PlaybookView content={playbookContent} />
           </div>
         </div>
       </main>
