@@ -1,7 +1,13 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { Portfolio, TradeAction } from "../../shared/types.js";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+let client: Anthropic;
+function getClient() {
+  if (!client) {
+    client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  }
+  return client;
+}
 
 export interface AgentInput {
   portfolio: Portfolio;
@@ -24,7 +30,7 @@ const CONSTRAINTS_BLOCK = `TRADE CONSTRAINTS (you MUST follow these):
 - Return actions as JSON array`;
 
 export async function runAgentPrompt(input: AgentInput): Promise<AgentOutput> {
-  const response = await client.messages.create({
+  const response = await getClient().messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 2048,
     messages: [
