@@ -18,6 +18,7 @@
   "type": "module",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",
+    "@mesadev/sdk": "^0.28.2",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
