@@ -136,21 +136,13 @@ export default function App() {
                 Built to explore versioned filesystems for multi-agent workflows. Real market data via Yahoo Finance. Three agents reasoned by Claude.
               </p>
             </div>
-            <div className="col-span-6 md:col-span-3">
+            <div className="col-span-12 md:col-span-6">
               <div className="section-label mb-3">Built with</div>
               <ul className="font-mono text-xs space-y-1.5 text-ink-2">
                 <li>@mesadev/sdk</li>
                 <li>@anthropic-ai/sdk</li>
                 <li>yahoo-finance2</li>
                 <li>react · vite · tailwind</li>
-              </ul>
-            </div>
-            <div className="col-span-6 md:col-span-3">
-              <div className="section-label mb-3">Inspired by</div>
-              <ul className="font-mono text-xs space-y-1.5 text-ink-2">
-                <li>mesa.dev</li>
-                <li>reearth.land</li>
-                <li>bloomberg terminal</li>
               </ul>
             </div>
           </div>
