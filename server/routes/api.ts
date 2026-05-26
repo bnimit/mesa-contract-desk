@@ -1,5 +1,7 @@
 import { Router } from "express";
-import { getMesa } from "../services/mesa.js";
+import { getMesa, reinitializeMesa } from "../services/mesa.js";
+import { hasKey, setKey, deleteKey, getKey } from "../services/config.js";
+import { hasAnthropicKey, reinitializeAnthropic, clearAnthropic } from "../services/claude.js";
 import { emitActivity } from "./events.js";
 import { getQuotes } from "../services/market.js";
 import { runAgent } from "../agents/base.js";
@@ -108,6 +110,10 @@ async function runAnalysis(timestamp: number, replayedFrom?: number) {
 
 apiRouter.post("/analyze", async (_req, res) => {
   try {
+    if (!hasAnthropicKey()) {
+      res.status(400).json({ error: "Anthropic API key not configured — add it in Settings" });
+      return;
+    }
     const result = await runAnalysis(Date.now());
     res.json(result);
   } catch (error) {
@@ -132,6 +138,10 @@ apiRouter.get("/diff", async (req, res) => {
 
 apiRouter.post("/replay", async (req, res) => {
   try {
+    if (!hasAnthropicKey()) {
+      res.status(400).json({ error: "Anthropic API key not configured — add it in Settings" });
+      return;
+    }
     const { from } = req.body as { from: number };
     if (!from) {
       res.status(400).json({ error: "'from' timestamp required" });
@@ -262,7 +272,7 @@ apiRouter.get("/playbook", async (_req, res) => {
 
 apiRouter.get("/settings", async (_req, res) => {
   const active = getMesa().backendName();
-  const hasMesaKey = !!process.env.MESA_API_KEY && process.env.MESA_API_KEY.length > 0;
+  const hasMesaKey = hasKey("MESA_API_KEY");
 
   const backends: StorageBackend[] = [
     {
@@ -286,18 +296,98 @@ apiRouter.get("/settings", async (_req, res) => {
   let mesaInfo: { org?: string; repo?: string; whoami?: string } | undefined;
   if (active === "mesa-sdk") {
     try {
-      const { Mesa } = await import("@mesadev/sdk");
-      const client = new Mesa({ apiKey: process.env.MESA_API_KEY });
-      const who = await client.whoami();
-      mesaInfo = {
-        org: who.org.slug,
-        repo: "portfolio-advisor",
-        whoami: who.key_name ?? who.key_id ?? "unknown",
-      };
+      const mesaApiKey = getKey("MESA_API_KEY");
+      if (mesaApiKey) {
+        const { Mesa } = await import("@mesadev/sdk");
+        const client = new Mesa({ apiKey: mesaApiKey });
+        const who = await client.whoami();
+        mesaInfo = {
+          org: who.org.slug,
+          repo: "portfolio-advisor",
+          whoami: who.key_name ?? who.key_id ?? "unknown",
+        };
+      }
     } catch { /* skip */ }
   }
 
-  res.json({ backends, mesaInfo });
+  res.json({
+    backends,
+    mesaInfo,
+    keys: { mesa: hasMesaKey, anthropic: hasKey("ANTHROPIC_API_KEY") },
+  });
+});
+
+apiRouter.post("/settings/keys", async (req, res) => {
+  try {
+    const { mesa: mesaKey, anthropic: anthropicKey } = req.body as {
+      mesa?: string;
+      anthropic?: string;
+    };
+
+    if (anthropicKey) {
+      try {
+        const testClient = new (await import("@anthropic-ai/sdk")).default({ apiKey: anthropicKey });
+        await testClient.messages.countTokens({
+          model: "claude-haiku-4-5-20251001",
+          messages: [{ role: "user", content: "test" }],
+        });
+      } catch {
+        res.json({ ok: false, error: "Invalid Anthropic API key" });
+        return;
+      }
+      setKey("ANTHROPIC_API_KEY", anthropicKey);
+      reinitializeAnthropic(anthropicKey);
+    }
+
+    if (mesaKey) {
+      try {
+        const { Mesa } = await import("@mesadev/sdk");
+        const testClient = new Mesa({ apiKey: mesaKey });
+        await testClient.whoami();
+      } catch {
+        res.json({ ok: false, error: "Invalid Mesa API key" });
+        return;
+      }
+      setKey("MESA_API_KEY", mesaKey);
+      await reinitializeMesa(mesaKey);
+    }
+
+    const active = getMesa().backendName();
+    res.json({
+      ok: true,
+      keys: { mesa: hasKey("MESA_API_KEY"), anthropic: hasKey("ANTHROPIC_API_KEY") },
+      backends: [
+        {
+          name: "local-fs",
+          label: "Local filesystem",
+          description: "Branches and history live in a directory on disk.",
+          available: true,
+          active: active === "local-fs",
+        },
+        {
+          name: "mesa-sdk",
+          label: "Mesa SDK · api.mesa.dev",
+          description: "Real branches on Mesa's versioned filesystem.",
+          available: hasKey("MESA_API_KEY"),
+          active: active === "mesa-sdk",
+        },
+      ],
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to save keys" });
+  }
+});
+
+apiRouter.delete("/settings/keys", async (_req, res) => {
+  try {
+    deleteKey("MESA_API_KEY");
+    deleteKey("ANTHROPIC_API_KEY");
+    await reinitializeMesa();
+    clearAnthropic();
+    res.json({ ok: true, keys: { mesa: false, anthropic: false } });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to clear keys" });
+  }
 });
 
 apiRouter.get("/activity", async (req, res) => {

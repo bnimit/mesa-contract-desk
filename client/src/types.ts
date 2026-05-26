@@ -13,6 +13,7 @@ export type {
   MesaDiffEntry,
   MesaDiffResponse,
   MesaActivityEvent,
+  KeyStatus,
 } from "@shared/types.js";
 
 export interface PortfolioWithPrices {

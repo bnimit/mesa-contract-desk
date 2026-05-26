@@ -119,3 +119,8 @@ export interface MesaActivityEvent {
   detail: string;
   timestamp: number;
 }
+
+export interface KeyStatus {
+  mesa: boolean;
+  anthropic: boolean;
+}
