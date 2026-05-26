@@ -1,8 +1,9 @@
 import express from "express";
 import cors from "cors";
+import { Mesa } from "@mesadev/sdk";
 import { mesa } from "./services/mesa.js";
 import { apiRouter } from "./routes/api.js";
-import { sseHandler } from "./routes/events.js";
+import { sseHandler, emitActivity } from "./routes/events.js";
 import type { Portfolio } from "../shared/types.js";
 
 const app = express();
@@ -24,6 +25,42 @@ const DEFAULT_PORTFOLIO: Portfolio = {
   cash: 5000.0,
   lastUpdated: new Date().toISOString().split("T")[0],
 };
+
+app.post("/api/webhooks/mesa", express.raw({ type: "application/json" }), async (req, res) => {
+  const apiKey = process.env.MESA_API_KEY;
+  const webhookSecret = process.env.MESA_WEBHOOK_SECRET;
+  if (!apiKey || !webhookSecret) {
+    res.status(501).json({ error: "Webhooks not configured" });
+    return;
+  }
+
+  const client = new Mesa({ apiKey, webhookSecret });
+
+  client.webhooks.on("change.created", (event) => {
+    emitActivity("file_written", `External change: ${event.data.change.message ?? "no message"}`);
+  });
+
+  client.webhooks.on("bookmark.merged", (event) => {
+    emitActivity("branch_merged", `External merge: bookmark ${event.data.bookmark.name}`, {
+      branch: event.data.bookmark.name,
+    });
+  });
+
+  try {
+    await client.webhooks.receive(new Request(`http://localhost${req.url}`, {
+      method: "POST",
+      headers: new Headers(
+        Object.entries(req.headers)
+          .filter((entry): entry is [string, string] => typeof entry[1] === "string")
+      ),
+      body: req.body,
+    }));
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("Webhook processing failed:", error);
+    res.status(400).json({ error: "Invalid webhook" });
+  }
+});
 
 async function start() {
   await mesa.init();
