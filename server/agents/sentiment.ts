@@ -1,6 +1,8 @@
 import type { AgentConfig } from "./base.js";
 import { getQuotes } from "../services/market.js";
-import yahooFinance from "yahoo-finance2";
+import YahooFinance from "yahoo-finance2";
+
+const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
 
 export const sentimentAgent: AgentConfig = {
   name: "Sentiment",

@@ -1,7 +1,9 @@
-import yahooFinance from "yahoo-finance2";
+import YahooFinance from "yahoo-finance2";
 import fs from "fs/promises";
 import path from "path";
 import type { MarketQuote } from "../../shared/types.js";
+
+const yahooFinance = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
 
 const SAMPLE_DATA_PATH = path.resolve("data/sample-market.json");
 
