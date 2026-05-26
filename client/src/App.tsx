@@ -144,7 +144,7 @@ export default function App() {
                 <div className="section-label mt-4">Analysis</div>
               </aside>
               <div className="col-span-12 md:col-span-10">
-                {state.status === "loading" && <AnalysisLoading />}
+                {state.status === "loading" && <AnalysisLoading events={mesaEvents} />}
 
                 {state.status === "error" && (
                   <div className="border border-down/30 bg-down/5 p-8 fade-in">
