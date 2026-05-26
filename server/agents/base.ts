@@ -1,4 +1,4 @@
-import { mesa } from "../services/mesa.js";
+import { getMesa } from "../services/mesa.js";
 import { runAgentPrompt, type AgentInput } from "../services/claude.js";
 import { validateProposal, applyActions } from "../validators/trade.js";
 import { readAgentMemory, memoryBlock } from "../services/memory.js";
@@ -22,7 +22,7 @@ export async function runAgent(
   ctx: RunContext
 ): Promise<AgentResult> {
   try {
-    const portfolioRaw = await mesa.readFile("main", "portfolio.json");
+    const portfolioRaw = await getMesa().readFile("main", "portfolio.json");
     const portfolio: Portfolio = JSON.parse(portfolioRaw);
     const tickers = portfolio.portfolio.map((h) => h.ticker);
 
@@ -59,8 +59,8 @@ export async function runAgent(
     await appendEntry(branchName, output.playbookEntry);
 
     // Persist the proposed portfolio on the agent's branch.
-    await mesa.writeFile(branchName, "portfolio.json", JSON.stringify(proposedPortfolio, null, 2));
-    await mesa.writeFile(branchName, "reasoning.md", `# ${config.name} Analysis\n\n${output.reasoning}`);
+    await getMesa().writeFile(branchName, "portfolio.json", JSON.stringify(proposedPortfolio, null, 2));
+    await getMesa().writeFile(branchName, "reasoning.md", `# ${config.name} Analysis\n\n${output.reasoning}`);
 
     let newMarketValue = proposedPortfolio.cash;
     for (const h of proposedPortfolio.portfolio) {

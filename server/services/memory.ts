@@ -1,4 +1,4 @@
-import { mesa } from "./mesa.js";
+import { getMesa } from "./mesa.js";
 import type { AgentMemory, PastPredictionRecord, AnalysisRound } from "../../shared/types.js";
 
 const HISTORY_DIR = "history";
@@ -8,14 +8,14 @@ export async function readAgentMemory(
   agentName: string,
   currentPrices: Map<string, number>
 ): Promise<AgentMemory> {
-  const files = await mesa.listFiles("main", HISTORY_DIR);
+  const files = await getMesa().listFiles("main", HISTORY_DIR);
   const recent = files.slice(-MAX_HISTORY_LOOKBACK);
 
   const records: PastPredictionRecord[] = [];
 
   for (const file of recent) {
     try {
-      const raw = await mesa.readFile("main", `${HISTORY_DIR}/${file}`);
+      const raw = await getMesa().readFile("main", `${HISTORY_DIR}/${file}`);
       const round = JSON.parse(raw) as StoredRound;
       const myResult = round.results.find((r) => r.agentName === agentName);
       if (!myResult?.proposal) continue;
@@ -124,7 +124,7 @@ export async function saveRoundSnapshot(round: AnalysisRound, currentPrices: Map
     })),
   };
 
-  await mesa.writeFile(
+  await getMesa().writeFile(
     "main",
     `${HISTORY_DIR}/${round.timestamp}.json`,
     JSON.stringify(snapshot, null, 2)
@@ -132,12 +132,12 @@ export async function saveRoundSnapshot(round: AnalysisRound, currentPrices: Map
 }
 
 export async function listHistoryRounds(currentPrices: Map<string, number>): Promise<HistoryRoundSummary[]> {
-  const files = await mesa.listFiles("main", HISTORY_DIR);
+  const files = await getMesa().listFiles("main", HISTORY_DIR);
   const summaries: HistoryRoundSummary[] = [];
 
   for (const file of files) {
     try {
-      const raw = await mesa.readFile("main", `${HISTORY_DIR}/${file}`);
+      const raw = await getMesa().readFile("main", `${HISTORY_DIR}/${file}`);
       const round = JSON.parse(raw) as StoredRound;
 
       const agents = round.results.map((r) => {

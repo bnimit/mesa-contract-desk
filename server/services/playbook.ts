@@ -1,4 +1,4 @@
-import { mesa } from "./mesa.js";
+import { getMesa } from "./mesa.js";
 
 const PLAYBOOK_FILE = "playbook.md";
 
@@ -14,14 +14,14 @@ const HEADER_RE = /^## \[Round (\d+) · ([^·]+) · ([^\]]+)\]\s*$/m;
 
 export async function readPlaybook(branch: string): Promise<string> {
   try {
-    return await mesa.readFile(branch, PLAYBOOK_FILE);
+    return await getMesa().readFile(branch, PLAYBOOK_FILE);
   } catch {
     return "# Playbook\n\n_No entries yet. Agents will add observations and rules as they run._\n";
   }
 }
 
 export async function writePlaybook(branch: string, content: string): Promise<void> {
-  await mesa.writeFile(branch, PLAYBOOK_FILE, content);
+  await getMesa().writeFile(branch, PLAYBOOK_FILE, content);
 }
 
 export async function appendEntry(branch: string, entry: string): Promise<void> {

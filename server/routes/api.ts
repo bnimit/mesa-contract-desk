@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { mesa } from "../services/mesa.js";
+import { getMesa } from "../services/mesa.js";
 import { emitActivity } from "./events.js";
 import { getQuotes } from "../services/market.js";
 import { runAgent } from "../agents/base.js";
@@ -21,13 +21,13 @@ let lastPlaybookBefore: string | null = null;
 // Helper: snapshot main into `snapshot/{ts}` so we can replay from this point.
 async function snapshotMain(timestamp: number): Promise<string> {
   const snapshotBranch = `snapshot/${timestamp}`;
-  await mesa.createBranch(snapshotBranch, "main");
+  await getMesa().createBranch(snapshotBranch, "main");
   return snapshotBranch;
 }
 
 apiRouter.get("/portfolio", async (_req, res) => {
   try {
-    const raw = await mesa.readFile("main", "portfolio.json");
+    const raw = await getMesa().readFile("main", "portfolio.json");
     const portfolio: Portfolio = JSON.parse(raw);
     const tickers = portfolio.portfolio.map((h) => h.ticker);
     const quotes = await getQuotes(tickers);
@@ -47,7 +47,7 @@ apiRouter.get("/portfolio", async (_req, res) => {
 });
 
 async function runAnalysis(timestamp: number, replayedFrom?: number) {
-  const raw = await mesa.readFile("main", "portfolio.json");
+  const raw = await getMesa().readFile("main", "portfolio.json");
   const portfolio: Portfolio = JSON.parse(raw);
   const tickers = portfolio.portfolio.map((h) => h.ticker);
   const quotes = await getQuotes(tickers);
@@ -70,7 +70,7 @@ async function runAnalysis(timestamp: number, replayedFrom?: number) {
   ];
 
   for (const a of agents) {
-    await mesa.createBranch(a.branch, "main");
+    await getMesa().createBranch(a.branch, "main");
     emitActivity("branch_created", `Forked ${a.branch} from main`, { branch: a.branch });
   }
 
@@ -97,9 +97,9 @@ async function runAnalysis(timestamp: number, replayedFrom?: number) {
   lastPlaybookBefore = playbookBefore;
 
   const changeIds: Record<string, { base: string | null; head: string | null }> = {};
-  const baseChangeId = await mesa.getChangeId("main");
+  const baseChangeId = await getMesa().getChangeId("main");
   for (const a of agents) {
-    const headChangeId = await mesa.getChangeId(a.branch);
+    const headChangeId = await getMesa().getChangeId(a.branch);
     changeIds[a.branch] = { base: baseChangeId, head: headChangeId };
   }
 
@@ -123,7 +123,7 @@ apiRouter.get("/diff", async (req, res) => {
       res.status(400).json({ error: "base and head change IDs required" });
       return;
     }
-    const diff = await mesa.getDiff(base, head);
+    const diff = await getMesa().getDiff(base, head);
     res.json({ diff });
   } catch (error) {
     res.status(500).json({ error: "Failed to get diff" });
@@ -140,7 +140,7 @@ apiRouter.post("/replay", async (req, res) => {
 
     const snapshotBranch = `snapshot/${from}`;
     // Restore main to the snapshot state.
-    await mesa.mergeBranch(snapshotBranch, "main");
+    await getMesa().mergeBranch(snapshotBranch, "main");
 
     const result = await runAnalysis(Date.now(), from);
     res.json(result);
@@ -173,8 +173,8 @@ async function mergePlaybooksAndPortfolio(winningBranch: string | null, branches
 
   // 2. If a winner was chosen, apply only that branch's portfolio.json.
   if (winningBranch) {
-    const portfolioRaw = await mesa.readFile(winningBranch, "portfolio.json");
-    await mesa.writeFile("main", "portfolio.json", portfolioRaw);
+    const portfolioRaw = await getMesa().readFile(winningBranch, "portfolio.json");
+    await getMesa().writeFile("main", "portfolio.json", portfolioRaw);
   }
 }
 
@@ -197,14 +197,14 @@ apiRouter.post("/merge", async (req, res) => {
 
     for (const b of allBranches) {
       try {
-        await mesa.deleteBranch(b);
+        await getMesa().deleteBranch(b);
         emitActivity("branch_deleted", `Deleted ${b}`, { branch: b });
       } catch {
         // branch may already be deleted
       }
     }
 
-    const raw = await mesa.readFile("main", "portfolio.json");
+    const raw = await getMesa().readFile("main", "portfolio.json");
     res.json({ portfolio: JSON.parse(raw) });
   } catch (error) {
     console.error("Merge failed:", error);
@@ -221,7 +221,7 @@ apiRouter.post("/dismiss", async (req, res) => {
 
     for (const b of allBranches) {
       try {
-        await mesa.deleteBranch(b);
+        await getMesa().deleteBranch(b);
         emitActivity("branch_deleted", `Deleted ${b}`, { branch: b });
       } catch {
         // already deleted
@@ -235,7 +235,7 @@ apiRouter.post("/dismiss", async (req, res) => {
 
 apiRouter.get("/history", async (_req, res) => {
   try {
-    const portfolioRaw = await mesa.readFile("main", "portfolio.json");
+    const portfolioRaw = await getMesa().readFile("main", "portfolio.json");
     const portfolio: Portfolio = JSON.parse(portfolioRaw);
     const tickers = portfolio.portfolio.map((h) => h.ticker);
     const quotes = await getQuotes(tickers);
@@ -261,7 +261,7 @@ apiRouter.get("/playbook", async (_req, res) => {
 });
 
 apiRouter.get("/settings", async (_req, res) => {
-  const active = mesa.backendName();
+  const active = getMesa().backendName();
   const hasMesaKey = !!process.env.MESA_API_KEY && process.env.MESA_API_KEY.length > 0;
 
   const backends: StorageBackend[] = [
@@ -303,7 +303,7 @@ apiRouter.get("/settings", async (_req, res) => {
 apiRouter.get("/activity", async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 20;
-    const events = await mesa.getActivity(limit);
+    const events = await getMesa().getActivity(limit);
     res.json({ events });
   } catch (error) {
     res.status(500).json({ error: "Failed to load activity" });
