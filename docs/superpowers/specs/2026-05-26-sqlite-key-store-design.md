@@ -28,27 +28,28 @@ SQLite key store using `better-sqlite3`.
 
 The current `mesa` export is a const assigned at module load. Change to:
 
-- `let currentBackend: MesaService` — mutable module-level variable
-- `export function getMesa(): MesaService` — getter (all call sites use this instead of the bare `mesa` import)
+- `let currentBackend: MesaService` — mutable module-level variable initialized to `LocalFsMesa`
+- `export function getMesa(): MesaService` — getter that returns `currentBackend`
 - `export async function reinitializeMesa(apiKey?: string): Promise<void>` — creates `SdkMesa` if key provided, `LocalFsMesa` otherwise, calls `init()`, replaces `currentBackend`
 
-Alternatively, keep the `mesa` export name but make it a module-level `let` and add a `reinitializeMesa` function. All existing call sites import `{ mesa }` — if we change to `let`, the import binding still resolves to the current value at call time since they access `mesa.readFile(...)` etc. through the module namespace.
-
-**Decision:** Use a `getMesa()` getter function for correctness — reassigning a `let` doesn't update existing imported bindings in ESM. All call sites (`api.ts`, `base.ts`, `memory.ts`, `playbook.ts`) change from `import { mesa }` to `import { getMesa }` and call `getMesa()` where they currently reference `mesa`.
+All call sites (`api.ts`, `base.ts`, `memory.ts`, `playbook.ts`) change from `import { mesa }` to `import { getMesa }` and call `getMesa()` where they currently reference `mesa`.
 
 ### 3. Dynamic Anthropic Client — `server/services/claude.ts`
 
-Same pattern:
-- `let currentClient: Anthropic | null` — mutable
-- `export function reinitializeAnthropic(apiKey: string): void` — creates new client
-- `export function getAnthropicClient(): Anthropic` — getter, throws if not initialized
-- On boot, if SQLite has an Anthropic key, initialize automatically
+The file already has a lazy `getClient()` pattern with a module-level `let client`. Refactor:
+
+- Remove the `loadApiKey()` function (which reads from `process.env` and `.env` file)
+- `export function reinitializeAnthropic(apiKey: string): void` — creates new `Anthropic({ apiKey })`, assigns to `client`
+- `export function hasAnthropicKey(): boolean` — returns whether client is initialized
+- The existing `getClient()` stays but throws a clear error "Anthropic API key not configured — add it in Settings" when `client` is null
+- On boot, if SQLite has an Anthropic key, call `reinitializeAnthropic(key)`
 
 ### 4. API Endpoints
 
 **`POST /api/settings/keys`**
 - Body: `{ mesa?: string, anthropic?: string }`
-- For each provided key: encrypt and store in SQLite
+- **Validate before saving:** For Mesa, attempt `client.whoami()`. For Anthropic, create a client and make a lightweight API call (e.g., count tokens or just instantiate — the SDK validates the key format). If validation fails, return `{ ok: false, error: "Invalid Mesa API key" }` without saving.
+- For each valid key: encrypt and store in SQLite
 - Reinitialize the relevant backend(s)
 - Return: `{ ok: true, keys: { mesa: boolean, anthropic: boolean }, backends: [...] }`
 
@@ -84,6 +85,10 @@ When `keys.anthropic` is false:
 
 Mesa key absence is not an error — app works with local-fs backend.
 
+### 6b. Server-side Guard — `server/routes/api.ts`
+
+The `/api/analyze` and `/api/replay` endpoints must check `hasAnthropicKey()` before running agents. If not configured, return `{ error: "Anthropic API key not configured — add it in Settings" }` with status 400. This prevents crashes if the UI state is stale or someone hits the API directly.
+
 ### 7. Boot Sequence — `server/index.ts`
 
 ```
@@ -98,6 +103,14 @@ Mesa key absence is not an error — app works with local-fs backend.
 ```
 
 Environment variables (`process.env.MESA_API_KEY`, `process.env.ANTHROPIC_API_KEY`) are NO LONGER read. All key management goes through SQLite. The `.env` file becomes unnecessary.
+
+### 7b. Webhook Endpoint Update — `server/index.ts`
+
+The `POST /api/webhooks/mesa` handler currently reads `process.env.MESA_API_KEY` and `process.env.MESA_WEBHOOK_SECRET`. Update to read the Mesa key from SQLite via `getKey("MESA_API_KEY")`. The webhook secret is not exposed in the UI — it remains an optional env var for advanced users who set up webhooks manually (keep `process.env.MESA_WEBHOOK_SECRET` for this one).
+
+### 7c. Remove dotenv
+
+Remove the `dotenv` import from `claude.ts` (the `loadApiKey` function that reads `.env` directly). The `dotenv` package can stay in `package.json` for now but is no longer imported anywhere.
 
 ### 8. Gitignore
 
@@ -121,9 +134,9 @@ Add `.mesa/` to `.gitignore` so the SQLite database is never committed.
 | `client/src/components/SettingsPanel.tsx` | Modify | Add key input fields |
 | `client/src/hooks/useApi.ts` | Modify | `useSettings` returns key status |
 | `client/src/App.tsx` | Modify | Inline prompt when no Anthropic key |
-| `shared/types.ts` | Modify | Add `KeyStatus` type |
+| `shared/types.ts` | Modify | Add `KeyStatus` type: `{ mesa: boolean; anthropic: boolean }` |
 | `.gitignore` | Modify | Add `.mesa/` |
-| `package.json` | Modify | Add `better-sqlite3` dependency |
+| `package.json` | Modify | Add `better-sqlite3` + `@types/better-sqlite3` |
 | `.env.example` | Modify | Update to note keys are now managed via UI |
 
 ---
