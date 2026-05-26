@@ -1,7 +1,9 @@
 import express from "express";
 import cors from "cors";
 import { Mesa } from "@mesadev/sdk";
-import { mesa } from "./services/mesa.js";
+import { getMesa, reinitializeMesa } from "./services/mesa.js";
+import { initConfigDb, getKey } from "./services/config.js";
+import { reinitializeAnthropic } from "./services/claude.js";
 import { apiRouter } from "./routes/api.js";
 import { sseHandler, emitActivity } from "./routes/events.js";
 import type { Portfolio } from "../shared/types.js";
@@ -27,7 +29,7 @@ const DEFAULT_PORTFOLIO: Portfolio = {
 };
 
 app.post("/api/webhooks/mesa", express.raw({ type: "application/json" }), async (req, res) => {
-  const apiKey = process.env.MESA_API_KEY;
+  const apiKey = getKey("MESA_API_KEY");
   const webhookSecret = process.env.MESA_WEBHOOK_SECRET;
   if (!apiKey || !webhookSecret) {
     res.status(501).json({ error: "Webhooks not configured" });
@@ -63,12 +65,27 @@ app.post("/api/webhooks/mesa", express.raw({ type: "application/json" }), async 
 });
 
 async function start() {
-  await mesa.init();
+  // 1. Initialize SQLite config database
+  initConfigDb();
 
+  // 2. Restore Anthropic client from stored key
+  const anthropicKey = getKey("ANTHROPIC_API_KEY");
+  if (anthropicKey) {
+    reinitializeAnthropic(anthropicKey);
+    console.log("Anthropic key loaded from config database");
+  } else {
+    console.log("No Anthropic key configured — add it in Settings");
+  }
+
+  // 3. Restore Mesa backend from stored key
+  const mesaKey = getKey("MESA_API_KEY");
+  await reinitializeMesa(mesaKey ?? undefined);
+
+  // 4. Seed portfolio if not present
   try {
-    await mesa.readFile("main", "portfolio.json");
+    await getMesa().readFile("main", "portfolio.json");
   } catch {
-    await mesa.writeFile("main", "portfolio.json", JSON.stringify(DEFAULT_PORTFOLIO, null, 2));
+    await getMesa().writeFile("main", "portfolio.json", JSON.stringify(DEFAULT_PORTFOLIO, null, 2));
     console.log("Initialized default portfolio on main branch");
   }
 

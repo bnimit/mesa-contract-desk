@@ -4,3 +4,4 @@ dist-server/
 .env
 mesa-repo/
 docs/blog/
+.mesa/
