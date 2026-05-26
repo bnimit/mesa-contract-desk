@@ -84,4 +84,16 @@ class LocalFsMesa implements MesaService {
   }
 }
 
-export const mesa: MesaService = new LocalFsMesa();
+import { SdkMesa } from "./mesa-sdk.js";
+
+function createBackend(): MesaService {
+  const apiKey = process.env.MESA_API_KEY;
+  if (apiKey && apiKey.length > 0) {
+    console.log("Using Mesa SDK backend (api.mesa.dev)");
+    return new SdkMesa(apiKey);
+  }
+  console.log("Using local filesystem backend (mesa-repo/)");
+  return new LocalFsMesa();
+}
+
+export const mesa: MesaService = createBackend();

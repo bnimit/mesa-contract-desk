@@ -1,0 +1,277 @@
+import { Mesa } from "@mesadev/sdk";
+import type { MesaService } from "./mesa.js";
+import type {
+  MesaDiffResponse,
+  MesaDiffEntry,
+  MesaDiffHunk,
+  MesaActivityEvent,
+} from "../../shared/types.js";
+
+const REPO_NAME = "portfolio-advisor";
+const AUTHOR = { name: "Mesa Portfolio Advisor", email: "bot@mesa.dev" };
+
+/**
+ * Returns true when an SDK error looks like a 404 / NOT_FOUND.
+ * The Mesa SDK throws the raw error body `{ error: { code, message } }`,
+ * so we pattern-match on that shape.
+ */
+function isNotFound(err: unknown): boolean {
+  if (err && typeof err === "object") {
+    const e = err as Record<string, unknown>;
+    // Shape 1: { error: { code: "NOT_FOUND" } }
+    if (e.error && typeof e.error === "object") {
+      const inner = e.error as Record<string, unknown>;
+      if (
+        typeof inner.code === "string" &&
+        inner.code.toUpperCase().includes("NOT_FOUND")
+      ) {
+        return true;
+      }
+    }
+    // Shape 2: { code: "NOT_FOUND" }  (in case the SDK unwraps)
+    if (
+      typeof e.code === "string" &&
+      e.code.toUpperCase().includes("NOT_FOUND")
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+export class SdkMesa implements MesaService {
+  private readonly client: Mesa;
+
+  constructor(apiKey: string) {
+    this.client = new Mesa({ apiKey });
+  }
+
+  // ── helpers ──────────────────────────────────────────────────────────
+
+  /**
+   * Resolve a bookmark name to its current change_id.
+   * Fetches the full bookmark list (the repo will rarely have more than
+   * a handful of bookmarks) and finds the matching entry.
+   */
+  private async resolveBookmark(name: string): Promise<string> {
+    const res = await this.client.bookmarks.list({ repo: REPO_NAME });
+    const bm = res.bookmarks.find((b) => b.name === name);
+    if (!bm) {
+      throw new Error(`Bookmark "${name}" not found in repo ${REPO_NAME}`);
+    }
+    return bm.change_id;
+  }
+
+  // ── MesaService implementation ──────────────────────────────────────
+
+  async init(): Promise<void> {
+    // Ensure the org is resolved (warm the SDK's internal cache).
+    await this.client.resolveOrg();
+
+    // Ensure the repo exists; create it if missing.
+    try {
+      await this.client.repos.get({ repo: REPO_NAME });
+    } catch (err: unknown) {
+      if (isNotFound(err)) {
+        await this.client.repos.create({
+          name: REPO_NAME,
+          default_bookmark: "main",
+        });
+        console.log(`Created Mesa repo "${REPO_NAME}"`);
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  async readFile(branch: string, filePath: string): Promise<string> {
+    const changeId = await this.resolveBookmark(branch);
+    const res = await this.client.content.get({
+      repo: REPO_NAME,
+      change_id: changeId,
+      path: filePath,
+    });
+    if (res.type !== "file") {
+      throw new Error(
+        `Expected file at "${filePath}" but got ${res.type}`,
+      );
+    }
+    return Buffer.from(res.content, "base64").toString("utf-8");
+  }
+
+  async writeFile(
+    branch: string,
+    filePath: string,
+    content: string,
+  ): Promise<void> {
+    const changeId = await this.resolveBookmark(branch);
+    const encoded = Buffer.from(content, "utf-8").toString("base64");
+
+    const change = await this.client.changes.create({
+      repo: REPO_NAME,
+      base_change_id: changeId,
+      message: `write ${filePath}`,
+      author: AUTHOR,
+      files: [
+        {
+          path: filePath,
+          content: encoded,
+          encoding: "base64",
+          action: "upsert",
+        },
+      ],
+    });
+
+    // Advance the bookmark to the newly created change.
+    await this.client.bookmarks.move({
+      repo: REPO_NAME,
+      bookmark: branch,
+      change_id: change.id,
+    });
+  }
+
+  async listFiles(branch: string, dir: string): Promise<string[]> {
+    const changeId = await this.resolveBookmark(branch);
+    try {
+      const res = await this.client.content.get({
+        repo: REPO_NAME,
+        change_id: changeId,
+        path: dir,
+        depth: 1,
+      });
+      if (res.type === "dir") {
+        return res.entries.map((e) => e.name).sort();
+      }
+      // If the path itself is a file, return its name as the sole entry.
+      return [res.name];
+    } catch (err: unknown) {
+      if (isNotFound(err)) {
+        return [];
+      }
+      throw err;
+    }
+  }
+
+  async createBranch(
+    branchName: string,
+    fromBranch: string,
+  ): Promise<void> {
+    const changeId = await this.resolveBookmark(fromBranch);
+    await this.client.bookmarks.create({
+      repo: REPO_NAME,
+      name: branchName,
+      change_id: changeId,
+    });
+  }
+
+  async mergeBranch(
+    branchName: string,
+    intoBranch: string,
+  ): Promise<void> {
+    await this.client.bookmarks.merge({
+      repo: REPO_NAME,
+      source: branchName,
+      target: intoBranch,
+    });
+  }
+
+  async deleteBranch(branchName: string): Promise<void> {
+    try {
+      await this.client.bookmarks.delete({
+        repo: REPO_NAME,
+        bookmark: branchName,
+      });
+    } catch {
+      // Already deleted or never existed — that's fine.
+    }
+  }
+
+  async listCommits(
+    branch: string,
+    limit: number,
+  ): Promise<{ hash: string; message: string; timestamp: number }[]> {
+    const res = await this.client.changes.list({
+      repo: REPO_NAME,
+      bookmark: branch,
+      limit,
+    });
+    return res.changes.map((c) => ({
+      hash: c.id,
+      message: c.message,
+      timestamp: new Date(c.created_at).getTime(),
+    }));
+  }
+
+  backendName(): string {
+    return "mesa-sdk";
+  }
+
+  async getChangeId(branch: string): Promise<string | null> {
+    try {
+      return await this.resolveBookmark(branch);
+    } catch {
+      return null;
+    }
+  }
+
+  async getDiff(
+    baseChangeId: string,
+    headChangeId: string,
+  ): Promise<MesaDiffResponse | null> {
+    try {
+      const res = await this.client.diffs.get({
+        repo: REPO_NAME,
+        base_change_id: baseChangeId,
+        head_change_id: headChangeId,
+      });
+
+      const entries: MesaDiffEntry[] = res.entries.map((e) => {
+        const hunks: MesaDiffHunk[] = (e.hunks ?? []).map((h) => ({
+          oldStart: h.old_start,
+          oldLines: h.old_lines,
+          newStart: h.new_start,
+          newLines: h.new_lines,
+          lines: h.lines.map((l) => ({
+            kind: l.kind,
+            content: l.text,
+          })),
+        }));
+        return {
+          path: e.path,
+          status: e.status,
+          hunks,
+        };
+      });
+
+      return {
+        baseChangeId: res.base_change_id,
+        headChangeId: res.head_change_id,
+        stats: {
+          additions: res.stats.additions,
+          deletions: res.stats.deletions,
+          entries: res.stats.entries,
+        },
+        entries,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async getActivity(limit: number): Promise<MesaActivityEvent[]> {
+    try {
+      const res = await this.client.changes.list({
+        repo: REPO_NAME,
+        limit,
+      });
+      return res.changes.map((c) => ({
+        id: c.id,
+        type: "file_written" as const,
+        detail: c.message,
+        timestamp: new Date(c.created_at).getTime(),
+      }));
+    } catch {
+      return [];
+    }
+  }
+}
