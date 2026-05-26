@@ -1,26 +1,23 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { readFileSync } from "fs";
-import { resolve } from "path";
 import type { Portfolio, TradeAction } from "../../shared/types.js";
 
-function loadApiKey(): string {
-  const fromEnv = process.env.ANTHROPIC_API_KEY;
-  if (fromEnv && fromEnv.startsWith("sk-")) return fromEnv;
+let client: Anthropic | null = null;
 
-  const envPath = resolve(process.cwd(), ".env");
-  try {
-    const content = readFileSync(envPath, "utf-8");
-    const match = content.match(/^ANTHROPIC_API_KEY=(.+)$/m);
-    if (match) return match[1].trim();
-  } catch {}
-
-  throw new Error("ANTHROPIC_API_KEY not found in environment or .env file");
+export function reinitializeAnthropic(apiKey: string): void {
+  client = new Anthropic({ apiKey });
 }
 
-let client: Anthropic;
-function getClient() {
+export function clearAnthropic(): void {
+  client = null;
+}
+
+export function hasAnthropicKey(): boolean {
+  return client !== null;
+}
+
+function getClient(): Anthropic {
   if (!client) {
-    client = new Anthropic({ apiKey: loadApiKey() });
+    throw new Error("Anthropic API key not configured — add it in Settings");
   }
   return client;
 }
