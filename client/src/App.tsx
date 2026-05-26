@@ -18,7 +18,7 @@ import { ActivityFeed } from "./components/ActivityFeed.js";
 export default function App() {
   const { portfolio, loading, refresh: refreshPortfolio } = usePortfolio();
   const { rounds, refresh: refreshHistory } = useHistory();
-  const { backends, loading: settingsLoading, mesaInfo } = useSettings();
+  const { backends, loading: settingsLoading, mesaInfo, keys, saveKeys, clearKeys } = useSettings();
   const [refreshKey, setRefreshKey] = useState(0);
   const { content: playbookContent } = usePlaybook(refreshKey);
 
@@ -104,7 +104,7 @@ export default function App() {
               </p>
               <button
                 onClick={analyze}
-                disabled={state.status === "loading"}
+                disabled={state.status === "loading" || !keys.anthropic}
                 className="group inline-flex items-center gap-3 px-6 py-3 bg-ink text-canvas hover:bg-mesa transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="font-mono text-xs tracking-widest uppercase">
@@ -114,6 +114,14 @@ export default function App() {
                   →
                 </span>
               </button>
+              {!keys.anthropic && (
+                <button
+                  onClick={() => setSettingsOpen(true)}
+                  className="section-label text-mesa hover:underline cursor-pointer mt-3 block text-left"
+                >
+                  Add your Anthropic API key in Settings to begin →
+                </button>
+              )}
             </div>
           </div>
         </section>
@@ -245,6 +253,9 @@ export default function App() {
         backends={backends}
         loading={settingsLoading}
         mesaInfo={mesaInfo}
+        keys={keys}
+        onSaveKeys={saveKeys}
+        onClearKeys={clearKeys}
       />
     </div>
   );

@@ -173,6 +173,7 @@ export function useSettings() {
   const [backends, setBackends] = useState<StorageBackend[]>([]);
   const [loading, setLoading] = useState(true);
   const [mesaInfo, setMesaInfo] = useState<{ org?: string; repo?: string; whoami?: string } | undefined>();
+  const [keys, setKeys] = useState<{ mesa: boolean; anthropic: boolean }>({ mesa: false, anthropic: false });
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -181,6 +182,7 @@ export function useSettings() {
       const data = await res.json();
       setBackends(data.backends ?? []);
       setMesaInfo(data.mesaInfo);
+      setKeys(data.keys ?? { mesa: false, anthropic: false });
     } catch {
       console.error("Failed to fetch settings");
     } finally {
@@ -188,9 +190,31 @@ export function useSettings() {
     }
   }, []);
 
+  const saveKeys = useCallback(async (keysToSave: { mesa?: string; anthropic?: string }) => {
+    const res = await fetch("/api/settings/keys", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(keysToSave),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      await refresh();
+    }
+    return data;
+  }, [refresh]);
+
+  const clearKeys = useCallback(async () => {
+    const res = await fetch("/api/settings/keys", { method: "DELETE" });
+    const data = await res.json();
+    if (data.ok) {
+      await refresh();
+    }
+    return data;
+  }, [refresh]);
+
   useEffect(() => {
     refresh();
   }, [refresh]);
 
-  return { backends, loading, refresh, mesaInfo };
+  return { backends, loading, refresh, mesaInfo, keys, saveKeys, clearKeys };
 }
