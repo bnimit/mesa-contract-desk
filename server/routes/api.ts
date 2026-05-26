@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { mesa } from "../services/mesa.js";
+import { emitActivity } from "./events.js";
 import { getQuotes } from "../services/market.js";
 import { runAgent } from "../agents/base.js";
 import { fundamentalsAgent } from "../agents/fundamentals.js";
@@ -70,10 +71,16 @@ async function runAnalysis(timestamp: number, replayedFrom?: number) {
 
   for (const a of agents) {
     await mesa.createBranch(a.branch, "main");
+    emitActivity("branch_created", `Forked ${a.branch} from main`, { branch: a.branch });
   }
 
   const results = await Promise.all(
-    agents.map((a) => runAgent(a.config, a.branch, currentPrices, { timestamp }))
+    agents.map(async (a) => {
+      emitActivity("analysis_started", `${a.config.name} analyzing portfolio`, { agent: a.config.name, branch: a.branch });
+      const result = await runAgent(a.config, a.branch, currentPrices, { timestamp });
+      emitActivity("agent_complete", `${a.config.name} finished: ${result.status}`, { agent: a.config.name, branch: a.branch });
+      return result;
+    })
   );
 
   const round: AnalysisRound = {
@@ -180,6 +187,7 @@ apiRouter.post("/merge", async (req, res) => {
     }
 
     await mergePlaybooksAndPortfolio(branch, allBranches);
+    emitActivity("branch_merged", `Merged ${branch} into main`, { branch });
 
     if (lastRound && lastRound.branches.includes(branch) && lastPriceMap) {
       const mergedResult = lastRound.results.find((r) => r.branch === branch);
@@ -190,6 +198,7 @@ apiRouter.post("/merge", async (req, res) => {
     for (const b of allBranches) {
       try {
         await mesa.deleteBranch(b);
+        emitActivity("branch_deleted", `Deleted ${b}`, { branch: b });
       } catch {
         // branch may already be deleted
       }
@@ -213,6 +222,7 @@ apiRouter.post("/dismiss", async (req, res) => {
     for (const b of allBranches) {
       try {
         await mesa.deleteBranch(b);
+        emitActivity("branch_deleted", `Deleted ${b}`, { branch: b });
       } catch {
         // already deleted
       }
@@ -274,4 +284,14 @@ apiRouter.get("/settings", async (_req, res) => {
   ];
 
   res.json({ backends });
+});
+
+apiRouter.get("/activity", async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 20;
+    const events = await mesa.getActivity(limit);
+    res.json({ events });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to load activity" });
+  }
 });

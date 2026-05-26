@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { mesa } from "./services/mesa.js";
 import { apiRouter } from "./routes/api.js";
+import { sseHandler } from "./routes/events.js";
 import type { Portfolio } from "../shared/types.js";
 
 const app = express();
@@ -10,6 +11,7 @@ const PORT = 3001;
 app.use(cors());
 app.use(express.json());
 app.use("/api", apiRouter);
+app.get("/api/events", sseHandler);
 
 const DEFAULT_PORTFOLIO: Portfolio = {
   portfolio: [

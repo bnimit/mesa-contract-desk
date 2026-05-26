@@ -6,12 +6,14 @@ import {
   useSettings,
   usePlaybook,
 } from "./hooks/useApi.js";
+import { useMesaEvents } from "./hooks/useMesaEvents.js";
 import { Portfolio } from "./components/Portfolio.js";
 import { ComparisonView } from "./components/ComparisonView.js";
 import { AnalysisLoading } from "./components/AnalysisLoading.js";
 import { SettingsPanel } from "./components/SettingsPanel.js";
 import { HistoryTimeline } from "./components/HistoryTimeline.js";
 import { PlaybookView } from "./components/PlaybookView.js";
+import { ActivityFeed } from "./components/ActivityFeed.js";
 
 export default function App() {
   const { portfolio, loading, refresh: refreshPortfolio } = usePortfolio();
@@ -27,6 +29,7 @@ export default function App() {
   }, [refreshPortfolio, refreshHistory]);
 
   const { state, analyze, replay, merge, dismiss } = useAnalysis(onComplete);
+  const { events: mesaEvents, connected: sseConnected } = useMesaEvents();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Belt-and-suspenders: whenever the analysis transitions to done or idle
@@ -194,6 +197,18 @@ export default function App() {
           </aside>
           <div className="col-span-12 md:col-span-10">
             <PlaybookView content={playbookContent} />
+          </div>
+        </div>
+
+        {/* Section 05: Activity */}
+        <div className="hairline mb-20" />
+        <div className="grid grid-cols-12 gap-8 mb-20">
+          <aside className="col-span-12 md:col-span-2">
+            <div className="section-number">05</div>
+            <div className="section-label mt-4">Activity</div>
+          </aside>
+          <div className="col-span-12 md:col-span-10">
+            <ActivityFeed events={mesaEvents} connected={sseConnected} />
           </div>
         </div>
       </main>
