@@ -26,6 +26,7 @@ export interface PortfolioWithPrices {
 export type AnalysisState =
   | { status: "idle" }
   | { status: "loading" }
+  | { status: "merging"; agentName: string }
   | { status: "done"; timestamp: number; results: import("@shared/types.js").AgentResult[]; diffs?: Record<string, import("@shared/types.js").MesaDiffEntry[]> }
   | { status: "error"; message: string };
 

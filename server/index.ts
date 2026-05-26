@@ -13,8 +13,8 @@ const PORT = 3001;
 
 app.use(cors());
 app.use(express.json());
-app.use("/api", apiRouter);
 app.get("/api/events", sseHandler);
+app.use("/api", apiRouter);
 
 export const DEFAULT_PORTFOLIO: Portfolio = {
   portfolio: [

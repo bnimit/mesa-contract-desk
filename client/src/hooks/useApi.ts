@@ -92,7 +92,8 @@ export function useAnalysis(onComplete?: () => void) {
   );
 
   const merge = useCallback(
-    async (branch: string, allBranches: string[]) => {
+    async (branch: string, allBranches: string[], agentName?: string) => {
+      setState({ status: "merging", agentName: agentName ?? branch });
       const res = await fetch("/api/merge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -107,6 +108,7 @@ export function useAnalysis(onComplete?: () => void) {
 
   const dismiss = useCallback(
     async (allBranches: string[]) => {
+      setState({ status: "merging", agentName: "all branches" });
       await fetch("/api/dismiss", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -14,7 +14,13 @@ export default defineConfig({
   server: {
     port: 4000,
     proxy: {
-      "/api": "http://localhost:3001",
+      "/api/events": {
+        target: "http://localhost:3001",
+        headers: { "Accept": "text/event-stream" },
+      },
+      "/api": {
+        target: "http://localhost:3001",
+      },
     },
   },
 });

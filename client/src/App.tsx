@@ -44,7 +44,10 @@ export default function App() {
   const allBranches = state.status === "done" ? state.results.map((r) => r.branch) : [];
 
   const handleAccept = async (branch: string) => {
-    await merge(branch, allBranches);
+    const agent = state.status === "done"
+      ? state.results.find((r) => r.branch === branch)?.agentName
+      : undefined;
+    await merge(branch, allBranches, agent);
   };
 
   const handleDismiss = async () => {
@@ -143,7 +146,7 @@ export default function App() {
         </div>
 
         {/* Section 02: Analysis */}
-        {(state.status === "loading" || state.status === "done" || state.status === "error") && (
+        {(state.status === "loading" || state.status === "done" || state.status === "error" || state.status === "merging") && (
           <>
             <div className="hairline mb-20" />
             <div className="grid grid-cols-12 gap-8 mb-20">
@@ -164,6 +167,20 @@ export default function App() {
                     >
                       Retry →
                     </button>
+                  </div>
+                )}
+
+                {state.status === "merging" && (
+                  <div className="border border-line p-8 fade-in">
+                    <div className="flex items-center gap-3">
+                      <div className="w-4 h-4 border-2 border-mesa border-t-transparent rounded-full animate-spin" />
+                      <div>
+                        <div className="section-label text-mesa">Merging</div>
+                        <p className="font-mono text-sm text-ink-2 mt-1">
+                          Applying {state.agentName} strategy to main branch…
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
