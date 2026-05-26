@@ -216,5 +216,10 @@ export function useSettings() {
     refresh();
   }, [refresh]);
 
-  return { backends, loading, refresh, mesaInfo, keys, saveKeys, clearKeys };
+  const resetDemo = useCallback(async () => {
+    const res = await fetch("/api/reset", { method: "POST" });
+    return await res.json();
+  }, []);
+
+  return { backends, loading, refresh, mesaInfo, keys, saveKeys, clearKeys, resetDemo };
 }

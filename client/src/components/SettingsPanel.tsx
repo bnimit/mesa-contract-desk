@@ -10,6 +10,7 @@ interface SettingsPanelProps {
   keys: { mesa: boolean; anthropic: boolean };
   onSaveKeys: (keys: { mesa?: string; anthropic?: string }) => Promise<{ ok: boolean; error?: string }>;
   onClearKeys: () => Promise<{ ok: boolean }>;
+  onReset: () => Promise<{ ok: boolean }>;
 }
 
 export function SettingsPanel({
@@ -21,6 +22,7 @@ export function SettingsPanel({
   keys,
   onSaveKeys,
   onClearKeys,
+  onReset,
 }: SettingsPanelProps) {
   const [anthropicInput, setAnthropicInput] = useState("");
   const [mesaInput, setMesaInput] = useState("");
@@ -234,6 +236,24 @@ export function SettingsPanel({
             <p className="serif-quote text-sm text-mute leading-relaxed">
               Every Mesa operation in this app — read, write, branch, merge, list — goes through a single <span className="font-mono not-italic text-ink-2">MesaService</span> interface. Switching backends replaces the implementation behind that interface. No agent code, no API route, no UI component changes.
             </p>
+          </div>
+
+          <div className="mt-10 pt-6 border-t border-line">
+            <div className="section-label mb-3">Reset demo</div>
+            <p className="serif-quote text-sm text-mute leading-relaxed mb-4">
+              Clear all history, reset the playbook, and restore the portfolio to its defaults. API keys are kept.
+            </p>
+            <button
+              onClick={async () => {
+                setSaving(true);
+                await onReset();
+                setSaving(false);
+              }}
+              disabled={saving}
+              className="font-mono text-xs uppercase tracking-widest px-4 py-2 border border-down/40 text-down hover:bg-down/10 transition-colors disabled:opacity-40"
+            >
+              {saving ? "Resetting…" : "Reset all data"}
+            </button>
           </div>
         </div>
       </aside>

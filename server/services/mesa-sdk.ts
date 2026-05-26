@@ -130,6 +130,11 @@ export class SdkMesa implements MesaService {
     });
   }
 
+  async deleteFile(branch: string, filePath: string): Promise<void> {
+    // Mesa SDK doesn't have a delete content API — overwrite with empty marker
+    await this.writeFile(branch, filePath, "");
+  }
+
   async listFiles(branch: string, dir: string): Promise<string[]> {
     const changeId = await this.resolveBookmark(branch);
     try {

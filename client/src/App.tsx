@@ -18,7 +18,7 @@ import { ActivityFeed } from "./components/ActivityFeed.js";
 export default function App() {
   const { portfolio, loading, refresh: refreshPortfolio } = usePortfolio();
   const { rounds, refresh: refreshHistory } = useHistory();
-  const { backends, loading: settingsLoading, mesaInfo, keys, saveKeys, clearKeys } = useSettings();
+  const { backends, loading: settingsLoading, mesaInfo, keys, saveKeys, clearKeys, resetDemo } = useSettings();
   const [refreshKey, setRefreshKey] = useState(0);
   const { content: playbookContent } = usePlaybook(refreshKey);
 
@@ -256,6 +256,15 @@ export default function App() {
         keys={keys}
         onSaveKeys={saveKeys}
         onClearKeys={clearKeys}
+        onReset={async () => {
+          const result = await resetDemo();
+          if (result.ok) {
+            refreshPortfolio();
+            refreshHistory();
+            setRefreshKey((k) => k + 1);
+          }
+          return result;
+        }}
       />
     </div>
   );

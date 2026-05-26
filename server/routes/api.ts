@@ -9,7 +9,7 @@ import { fundamentalsAgent } from "../agents/fundamentals.js";
 import { sentimentAgent } from "../agents/sentiment.js";
 import { technicalAgent } from "../agents/technical.js";
 import { saveRoundSnapshot, listHistoryRounds } from "../services/memory.js";
-import { readPlaybook, appendEntry, diffAppended } from "../services/playbook.js";
+import { readPlaybook, appendEntry, diffAppended, writePlaybook } from "../services/playbook.js";
 import type { Portfolio, AnalysisRound, StorageBackend } from "../../shared/types.js";
 
 export const apiRouter = Router();
@@ -387,6 +387,42 @@ apiRouter.delete("/settings/keys", async (_req, res) => {
     res.json({ ok: true, keys: { mesa: false, anthropic: false } });
   } catch (error) {
     res.status(500).json({ error: "Failed to clear keys" });
+  }
+});
+
+apiRouter.post("/reset", async (_req, res) => {
+  try {
+    const mesa = getMesa();
+
+    // 1. Delete all history files
+    const historyFiles = await mesa.listFiles("main", "history");
+    for (const file of historyFiles) {
+      try {
+        await mesa.deleteFile("main", `history/${file}`);
+      } catch { /* skip */ }
+    }
+
+    // 2. Reset playbook to default
+    await writePlaybook("main", "# Playbook\n\n_No entries yet. Agents will add observations and rules as they run._\n");
+
+    // 3. Reset portfolio to default
+    const { DEFAULT_PORTFOLIO } = await import("../index.js");
+    await mesa.writeFile("main", "portfolio.json", JSON.stringify({
+      ...DEFAULT_PORTFOLIO,
+      lastUpdated: new Date().toISOString().split("T")[0],
+    }, null, 2));
+
+    // 4. Clear in-memory state
+    lastRound = null;
+    lastPriceMap = null;
+    lastPlaybookBefore = null;
+
+    emitActivity("file_written", "Demo reset — portfolio, playbook, and history cleared");
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error("Reset failed:", error);
+    res.status(500).json({ error: "Reset failed" });
   }
 });
 

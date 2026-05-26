@@ -16,7 +16,7 @@ app.use(express.json());
 app.use("/api", apiRouter);
 app.get("/api/events", sseHandler);
 
-const DEFAULT_PORTFOLIO: Portfolio = {
+export const DEFAULT_PORTFOLIO: Portfolio = {
   portfolio: [
     { ticker: "AAPL", shares: 10, avgCost: 185.5 },
     { ticker: "NVDA", shares: 5, avgCost: 890.0 },
