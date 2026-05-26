@@ -89,3 +89,33 @@ export interface MarketQuote {
   changePercent: number;
   name: string;
 }
+
+export interface MesaDiffHunk {
+  oldStart: number;
+  oldLines: number;
+  newStart: number;
+  newLines: number;
+  lines: { kind: "context" | "added" | "deleted" | "annotation"; content: string }[];
+}
+
+export interface MesaDiffEntry {
+  path: string;
+  status: "added" | "modified" | "deleted" | "renamed";
+  hunks: MesaDiffHunk[];
+}
+
+export interface MesaDiffResponse {
+  baseChangeId: string;
+  headChangeId: string;
+  stats: { additions: number; deletions: number; entries: number };
+  entries: MesaDiffEntry[];
+}
+
+export interface MesaActivityEvent {
+  id: string;
+  type: "branch_created" | "file_written" | "branch_merged" | "branch_deleted" | "analysis_started" | "agent_complete";
+  agent?: string;
+  branch?: string;
+  detail: string;
+  timestamp: number;
+}

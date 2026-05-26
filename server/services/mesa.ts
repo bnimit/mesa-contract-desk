@@ -13,6 +13,9 @@ export interface MesaService {
   deleteBranch(branchName: string): Promise<void>;
   listCommits(branch: string, limit: number): Promise<{ hash: string; message: string; timestamp: number }[]>;
   backendName(): string;
+  getChangeId(branch: string): Promise<string | null>;
+  getDiff(baseChangeId: string, headChangeId: string): Promise<import("../../shared/types.js").MesaDiffResponse | null>;
+  getActivity(limit: number): Promise<import("../../shared/types.js").MesaActivityEvent[]>;
 }
 
 class LocalFsMesa implements MesaService {
@@ -65,6 +68,18 @@ class LocalFsMesa implements MesaService {
   }
 
   async listCommits(_branch: string, _limit: number) {
+    return [];
+  }
+
+  async getChangeId(_branch: string): Promise<string | null> {
+    return null;
+  }
+
+  async getDiff(_baseChangeId: string, _headChangeId: string): Promise<import("../../shared/types.js").MesaDiffResponse | null> {
+    return null;
+  }
+
+  async getActivity(_limit: number): Promise<import("../../shared/types.js").MesaActivityEvent[]> {
     return [];
   }
 }

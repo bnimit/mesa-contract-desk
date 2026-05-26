@@ -9,6 +9,10 @@ export type {
   PlaybookEntry,
   MarketQuote,
   StorageBackend,
+  MesaDiffHunk,
+  MesaDiffEntry,
+  MesaDiffResponse,
+  MesaActivityEvent,
 } from "@shared/types.js";
 
 export interface PortfolioWithPrices {
