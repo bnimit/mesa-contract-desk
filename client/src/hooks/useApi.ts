@@ -172,6 +172,7 @@ export function useHistory() {
 export function useSettings() {
   const [backends, setBackends] = useState<StorageBackend[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mesaInfo, setMesaInfo] = useState<{ org?: string; repo?: string; whoami?: string } | undefined>();
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -179,6 +180,7 @@ export function useSettings() {
       const res = await fetch("/api/settings");
       const data = await res.json();
       setBackends(data.backends ?? []);
+      setMesaInfo(data.mesaInfo);
     } catch {
       console.error("Failed to fetch settings");
     } finally {
@@ -190,5 +192,5 @@ export function useSettings() {
     refresh();
   }, [refresh]);
 
-  return { backends, loading, refresh };
+  return { backends, loading, refresh, mesaInfo };
 }

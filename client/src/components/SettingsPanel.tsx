@@ -6,9 +6,10 @@ interface SettingsPanelProps {
   onClose: () => void;
   backends: StorageBackend[];
   loading: boolean;
+  mesaInfo?: { org?: string; repo?: string; whoami?: string };
 }
 
-export function SettingsPanel({ open, onClose, backends, loading }: SettingsPanelProps) {
+export function SettingsPanel({ open, onClose, backends, loading, mesaInfo }: SettingsPanelProps) {
   useEffect(() => {
     if (!open) return;
     const handleKey = (e: KeyboardEvent) => {
@@ -95,6 +96,26 @@ export function SettingsPanel({ open, onClose, backends, loading }: SettingsPane
               </li>
             ))}
           </ul>
+
+          {mesaInfo && (
+            <div className="mt-8 pt-6 border-t border-line">
+              <div className="section-label mb-3">Mesa connection</div>
+              <div className="font-mono text-xs space-y-2 text-ink-2">
+                <div className="flex justify-between">
+                  <span className="text-mute">org</span>
+                  <span>{mesaInfo.org}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-mute">repo</span>
+                  <span>{mesaInfo.repo}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-mute">key</span>
+                  <span>{mesaInfo.whoami}</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="mt-10 pt-6 border-t border-line">
             <div className="section-label mb-3">How the swap works</div>

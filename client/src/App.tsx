@@ -18,7 +18,7 @@ import { ActivityFeed } from "./components/ActivityFeed.js";
 export default function App() {
   const { portfolio, loading, refresh: refreshPortfolio } = usePortfolio();
   const { rounds, refresh: refreshHistory } = useHistory();
-  const { backends, loading: settingsLoading } = useSettings();
+  const { backends, loading: settingsLoading, mesaInfo } = useSettings();
   const [refreshKey, setRefreshKey] = useState(0);
   const { content: playbookContent } = usePlaybook(refreshKey);
 
@@ -244,6 +244,7 @@ export default function App() {
         onClose={() => setSettingsOpen(false)}
         backends={backends}
         loading={settingsLoading}
+        mesaInfo={mesaInfo}
       />
     </div>
   );

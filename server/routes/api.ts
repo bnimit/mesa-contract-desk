@@ -277,13 +277,27 @@ apiRouter.get("/settings", async (_req, res) => {
       name: "mesa-sdk",
       label: "Mesa SDK · api.mesa.dev",
       description:
-        "Real branches on Mesa's versioned filesystem. Requires MESA_API_KEY in .env. Requested early access — not yet enabled.",
+        "Real branches on Mesa's versioned filesystem. Sub-50ms reads, instant forks, full audit trail. Connected via MESA_API_KEY.",
       available: hasMesaKey,
       active: active === "mesa-sdk",
     },
   ];
 
-  res.json({ backends });
+  let mesaInfo: { org?: string; repo?: string; whoami?: string } | undefined;
+  if (active === "mesa-sdk") {
+    try {
+      const { Mesa } = await import("@mesadev/sdk");
+      const client = new Mesa({ apiKey: process.env.MESA_API_KEY });
+      const who = await client.whoami();
+      mesaInfo = {
+        org: who.org.slug,
+        repo: "portfolio-advisor",
+        whoami: who.key_name ?? who.key_id ?? "unknown",
+      };
+    } catch { /* skip */ }
+  }
+
+  res.json({ backends, mesaInfo });
 });
 
 apiRouter.get("/activity", async (req, res) => {
