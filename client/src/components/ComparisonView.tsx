@@ -5,9 +5,10 @@ interface ComparisonViewProps {
   results: AgentResult[];
   onAccept: (branch: string) => void;
   onDismiss: () => void;
+  diffs?: Record<string, import("../types.js").MesaDiffEntry[]>;
 }
 
-export function ComparisonView({ results, onAccept, onDismiss }: ComparisonViewProps) {
+export function ComparisonView({ results, onAccept, onDismiss, diffs }: ComparisonViewProps) {
   return (
     <section className="reveal">
       <header className="flex items-end justify-between mb-8 pb-6 border-b border-line">
@@ -36,7 +37,7 @@ export function ComparisonView({ results, onAccept, onDismiss }: ComparisonViewP
             className="border-b border-r last:border-r-0 border-line reveal lg:border-b-0 flex"
             style={{ animationDelay: `${0.2 + i * 0.1}s` }}
           >
-            <AgentCard result={r} onAccept={() => onAccept(r.branch)} />
+            <AgentCard result={r} onAccept={() => onAccept(r.branch)} diff={diffs?.[r.branch]} />
           </div>
         ))}
       </div>

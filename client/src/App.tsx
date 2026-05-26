@@ -161,6 +161,7 @@ export default function App() {
                     results={state.results}
                     onAccept={handleAccept}
                     onDismiss={handleDismiss}
+                    diffs={state.status === "done" ? state.diffs : undefined}
                   />
                 )}
               </div>

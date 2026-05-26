@@ -89,7 +89,14 @@ async function runAnalysis(timestamp: number, replayedFrom?: number) {
   lastPriceMap = currentPrices;
   lastPlaybookBefore = playbookBefore;
 
-  return { timestamp, results, replayedFrom };
+  const changeIds: Record<string, { base: string | null; head: string | null }> = {};
+  const baseChangeId = await mesa.getChangeId("main");
+  for (const a of agents) {
+    const headChangeId = await mesa.getChangeId(a.branch);
+    changeIds[a.branch] = { base: baseChangeId, head: headChangeId };
+  }
+
+  return { timestamp, results, replayedFrom, changeIds };
 }
 
 apiRouter.post("/analyze", async (_req, res) => {
@@ -99,6 +106,20 @@ apiRouter.post("/analyze", async (_req, res) => {
   } catch (error) {
     console.error("Analysis failed:", error);
     res.status(500).json({ error: "Analysis failed" });
+  }
+});
+
+apiRouter.get("/diff", async (req, res) => {
+  try {
+    const { base, head } = req.query as { base?: string; head?: string };
+    if (!base || !head) {
+      res.status(400).json({ error: "base and head change IDs required" });
+      return;
+    }
+    const diff = await mesa.getDiff(base, head);
+    res.json({ diff });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to get diff" });
   }
 });
 

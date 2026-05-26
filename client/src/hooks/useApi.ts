@@ -4,6 +4,7 @@ import type {
   AnalysisState,
   HistoryRoundSummary,
   StorageBackend,
+  MesaDiffEntry,
 } from "../types.js";
 
 export function usePortfolio() {
@@ -37,7 +38,20 @@ export function useAnalysis(onComplete?: () => void) {
       const res = await fetch("/api/analyze", { method: "POST" });
       if (!res.ok) throw new Error("Analysis failed");
       const data = await res.json();
-      setState({ status: "done", timestamp: data.timestamp, results: data.results });
+      let diffs: Record<string, MesaDiffEntry[]> | undefined;
+      if (data.changeIds) {
+        diffs = {};
+        for (const [branch, ids] of Object.entries(data.changeIds as Record<string, { base: string; head: string }>)) {
+          if (ids.base && ids.head) {
+            try {
+              const diffRes = await fetch(`/api/diff?base=${ids.base}&head=${ids.head}`);
+              const diffData = await diffRes.json();
+              if (diffData.diff) diffs[branch] = diffData.diff.entries;
+            } catch { /* skip */ }
+          }
+        }
+      }
+      setState({ status: "done", timestamp: data.timestamp, results: data.results, diffs });
       onComplete?.();
     } catch (e) {
       setState({ status: "error", message: e instanceof Error ? e.message : "Unknown error" });
@@ -55,7 +69,20 @@ export function useAnalysis(onComplete?: () => void) {
         });
         if (!res.ok) throw new Error("Replay failed");
         const data = await res.json();
-        setState({ status: "done", timestamp: data.timestamp, results: data.results });
+        let diffs: Record<string, MesaDiffEntry[]> | undefined;
+        if (data.changeIds) {
+          diffs = {};
+          for (const [branch, ids] of Object.entries(data.changeIds as Record<string, { base: string; head: string }>)) {
+            if (ids.base && ids.head) {
+              try {
+                const diffRes = await fetch(`/api/diff?base=${ids.base}&head=${ids.head}`);
+                const diffData = await diffRes.json();
+                if (diffData.diff) diffs[branch] = diffData.diff.entries;
+              } catch { /* skip */ }
+            }
+          }
+        }
+        setState({ status: "done", timestamp: data.timestamp, results: data.results, diffs });
         onComplete?.();
       } catch (e) {
         setState({ status: "error", message: e instanceof Error ? e.message : "Unknown error" });

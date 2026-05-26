@@ -1,9 +1,11 @@
-import type { AgentResult } from "../types.js";
+import type { AgentResult, MesaDiffEntry } from "../types.js";
 import { PlaybookDiff } from "./PlaybookDiff.js";
+import { DiffView } from "./DiffView.js";
 
 interface AgentCardProps {
   result: AgentResult;
   onAccept: () => void;
+  diff?: MesaDiffEntry[];
 }
 
 const AGENT_META: Record<string, { color: string; bg: string; label: string; sigil: string }> = {
@@ -27,7 +29,7 @@ const AGENT_META: Record<string, { color: string; bg: string; label: string; sig
   },
 };
 
-export function AgentCard({ result, onAccept }: AgentCardProps) {
+export function AgentCard({ result, onAccept, diff }: AgentCardProps) {
   const meta = AGENT_META[result.agentName] ?? {
     color: "text-mute",
     bg: "bg-mute",
@@ -107,6 +109,18 @@ export function AgentCard({ result, onAccept }: AgentCardProps) {
         <div className="mb-6">
           <PlaybookDiff entry={proposal.playbookEntry} agentColor={meta.color} />
         </div>
+      )}
+
+      {diff && diff.length > 0 && (
+        <details className="mb-6 group/diff">
+          <summary className="section-label cursor-pointer hover:text-ink transition-colors flex items-center gap-2">
+            <span>Mesa diff</span>
+            <span className="text-mute-2 group-open/diff:rotate-90 transition-transform">›</span>
+          </summary>
+          <div className="mt-3">
+            <DiffView entries={diff} agentColor={meta.color} />
+          </div>
+        </details>
       )}
 
       <div className="flex-1 mb-8">
