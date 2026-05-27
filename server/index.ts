@@ -20,7 +20,7 @@ app.use("/api", apiRouter);
 import path from "path";
 import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const clientDist = path.resolve(__dirname, "../client/dist");
+const clientDist = path.resolve(__dirname, "../../client/dist");
 app.use(express.static(clientDist));
 app.get("/{*splat}", (_req, res, next) => {
   if (_req.path.startsWith("/api")) return next();
