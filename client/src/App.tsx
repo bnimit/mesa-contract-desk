@@ -113,14 +113,27 @@ export default function App() {
               </div>
             )}
             <span className="font-mono text-xs text-mute hidden sm:inline">v0.2 · alpha</span>
-            <button
-              onClick={() => setSettingsOpen(true)}
-              className="text-ink-2 hover:text-mesa transition-colors p-1"
-              aria-label="Open settings"
-              title="Settings"
-            >
-              <SettingsCog />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setSettingsOpen(true)}
+                className="text-ink-2 hover:text-mesa transition-colors p-1"
+                aria-label="Open settings"
+                title="Settings"
+              >
+                <SettingsCog />
+              </button>
+              {!keys.anthropic && !settingsOpen && (
+                <div className="absolute right-0 top-full mt-2 settings-callout">
+                  <span className="absolute -top-1 right-3 w-2 h-2 bg-ink rotate-45" />
+                  <div className="bg-ink text-canvas px-4 py-2.5 font-mono text-[11px] tracking-wide whitespace-nowrap">
+                    Add API keys to start the demo
+                  </div>
+                </div>
+              )}
+              {!keys.anthropic && (
+                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-mesa settings-pulse" />
+              )}
+            </div>
           </div>
         </div>
       </header>
