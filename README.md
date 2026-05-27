@@ -50,9 +50,9 @@ Built to showcase how Mesa enables multi-agent workflows with branching, isolati
 1. **Fork** — Each agent gets its own Mesa branch forked from `main`
 2. **Analyze** — Agents fetch live market data (Yahoo Finance) and reason with Claude Haiku
 3. **Write** — Each agent writes proposed trades to `portfolio.json` and observations to `playbook.md` on its branch
-4. **Compare** — The UI shows all three proposals side-by-side with Mesa diffs
+4. **Compare** — The UI shows all three proposals side-by-side as compact trade bullets
 5. **Merge** — You pick one strategy; its portfolio merges to `main`, all agents' playbook entries merge (so every agent learns from every round)
-6. **Replay** — Any past round can be replayed from its snapshot branch
+6. **Replay** — Browse any past round's original proposals with the chosen strategy highlighted (no LLM re-call)
 
 ### What Mesa Provides
 
@@ -60,8 +60,8 @@ Built to showcase how Mesa enables multi-agent workflows with branching, isolati
 |---|---|
 | **Branching** | Each agent works on an isolated branch — no interference |
 | **Merge** | Winning strategy's portfolio merges cleanly to main |
-| **History** | Every round creates a snapshot branch for replay |
-| **Diffs** | Real file-level diffs show exactly what each agent changed |
+| **History** | Every round's proposals are stored for instant replay |
+| **Snapshots** | Each round snapshots `main` so the full state is recoverable |
 | **Audit trail** | The shared playbook accumulates reasoning across rounds |
 
 ## Agents
@@ -93,8 +93,8 @@ Optionally add a **Mesa API key** to switch from the local filesystem backend to
 ┌─────────────────────────────────────────────────────────────┐
 │  Browser (React + Tailwind)                                 │
 │  ┌──────────────┐ ┌──────────────┐ ┌──────────────────────┐ │
-│  │ Portfolio     │ │ Comparison   │ │ Settings Panel       │ │
-│  │ display       │ │ cards + diffs│ │ API keys, backend    │ │
+│  │ Portfolio     │ │ Branch viz + │ │ Settings Panel       │ │
+│  │ display       │ │ agent cards  │ │ API keys, backend    │ │
 │  └──────┬───────┘ └──────┬───────┘ └──────────┬───────────┘ │
 │         │                │                     │             │
 │  ┌──────┴────────────────┴─────────────────────┴──────────┐  │
@@ -134,11 +134,12 @@ Adding a Mesa API key in Settings switches the backend at runtime. No code chang
 
 ## Features
 
+- **Animated branch visualization** — SVG tree animates through fork → analyze → merge in real time
 - **Three competing AI agents** with distinct strategies and real market data
 - **Shared playbook** — agents read each other's past reasoning and improve over time
+- **Compact proposal cards** — trade bullets in plain English, portfolio impact at a glance
+- **True replay** — instantly view any past round's original proposals with the chosen strategy highlighted
 - **Live activity feed** — SSE-powered stream of every Mesa operation (branch, write, merge)
-- **Real diffs** — file-level diffs showing exactly what each agent changed
-- **Replay** — re-run any past analysis round from its snapshot
 - **Zero-config setup** — API keys entered in UI, encrypted in local SQLite, no .env needed
 - **Demo reset** — clear all history and start fresh from Settings
 - **Webhook support** — Mesa webhooks feed external activity into the live feed
