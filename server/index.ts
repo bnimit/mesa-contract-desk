@@ -9,12 +9,23 @@ import { sseHandler, emitActivity } from "./routes/events.js";
 import type { Portfolio } from "../shared/types.js";
 
 const app = express();
-const PORT = 3001;
+const PORT = parseInt(process.env.PORT || "3001", 10);
 
 app.use(cors());
 app.use(express.json());
 app.get("/api/events", sseHandler);
 app.use("/api", apiRouter);
+
+// In production, serve the built Vite client
+import path from "path";
+import { fileURLToPath } from "url";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const clientDist = path.resolve(__dirname, "../client/dist");
+app.use(express.static(clientDist));
+app.get("/{*splat}", (_req, res, next) => {
+  if (_req.path.startsWith("/api")) return next();
+  res.sendFile(path.join(clientDist, "index.html"));
+});
 
 export const DEFAULT_PORTFOLIO: Portfolio = {
   portfolio: [
