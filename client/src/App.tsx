@@ -126,7 +126,7 @@ export default function App() {
                 <div className="absolute right-0 top-full mt-2 settings-callout">
                   <span className="absolute -top-1 right-3 w-2 h-2 bg-ink rotate-45" />
                   <div className="bg-ink text-canvas px-4 py-2.5 font-mono text-[11px] tracking-wide whitespace-nowrap">
-                    Add API keys to start the demo
+                    Add API keys to use the demo
                   </div>
                 </div>
               )}
