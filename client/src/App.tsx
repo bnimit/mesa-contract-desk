@@ -112,7 +112,7 @@ export default function App() {
                 <span>backend: {activeBackend.name}</span>
               </div>
             )}
-            <span className="font-mono text-xs text-mute hidden sm:inline">v0.1 · alpha</span>
+            <span className="font-mono text-xs text-mute hidden sm:inline">v0.2 · alpha</span>
             <button
               onClick={() => setSettingsOpen(true)}
               className="text-ink-2 hover:text-mesa transition-colors p-1"
