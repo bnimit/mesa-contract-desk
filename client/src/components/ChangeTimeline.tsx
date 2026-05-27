@@ -46,7 +46,10 @@ export function ChangeTimeline({ changes, loading }: ChangeTimelineProps) {
   return (
     <div className="border border-line">
       <div className="px-6 py-3 border-b border-line flex items-center justify-between">
-        <div className="section-label">Mesa change log</div>
+        <div>
+          <div className="section-label">Mesa change log</div>
+          <div className="font-mono text-[10px] text-mute mt-0.5">Immutable audit trail — changes are never deleted</div>
+        </div>
         <div className="font-mono text-xs text-mute">
           {changes.length} change{changes.length !== 1 ? "s" : ""}
         </div>
