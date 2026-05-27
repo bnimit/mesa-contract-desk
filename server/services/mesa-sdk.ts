@@ -5,6 +5,9 @@ import type {
   MesaDiffEntry,
   MesaDiffHunk,
   MesaActivityEvent,
+  WebhookTarget,
+  MesaChange,
+  RepoTags,
 } from "../../shared/types.js";
 
 const REPO_NAME = "portfolio-advisor";
@@ -288,5 +291,80 @@ export class SdkMesa implements MesaService {
     } catch {
       return [];
     }
+  }
+
+  // ── Webhook Targets ────────────────────────────────────────────────
+
+  async listWebhookTargets(): Promise<WebhookTarget[]> {
+    try {
+      const res = await this.client.webhookTargets.list();
+      return res.webhook_targets.map((t) => ({
+        id: t.id,
+        name: t.name,
+        url: t.url,
+        events: t.events,
+        createdAt: t.created_at,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  async createWebhookTarget(url: string, name?: string, events?: string[]): Promise<WebhookTarget> {
+    const res = await this.client.webhookTargets.create({
+      url,
+      name: name || undefined,
+      events: (events as any) || undefined,
+    });
+    return {
+      id: res.id,
+      name: res.name,
+      url: res.url,
+      events: res.events,
+      createdAt: res.created_at,
+    };
+  }
+
+  async deleteWebhookTarget(id: string): Promise<void> {
+    await this.client.webhookTargets.delete({ webhookTargetId: id });
+  }
+
+  // ── Rich Change History ────────────────────────────────────────────
+
+  async listChanges(limit: number): Promise<MesaChange[]> {
+    try {
+      const res = await this.client.changes.list({
+        repo: REPO_NAME,
+        limit,
+      });
+      return res.changes.map((c) => ({
+        id: c.id,
+        message: c.message,
+        author: { name: c.author.name, email: c.author.email },
+        timestamp: new Date(c.created_at).getTime(),
+        isConflicted: c.is_conflicted,
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  // ── Repository Tags ────────────────────────────────────────────────
+
+  async getRepoTags(): Promise<RepoTags> {
+    try {
+      const res = await this.client.repos.get({ repo: REPO_NAME });
+      return res.tags ?? {};
+    } catch {
+      return {};
+    }
+  }
+
+  async setRepoTags(tags: Record<string, string | null>): Promise<RepoTags> {
+    const res = await this.client.repos.update({
+      repo: REPO_NAME,
+      tags,
+    });
+    return res.tags ?? {};
   }
 }

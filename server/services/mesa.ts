@@ -17,6 +17,15 @@ export interface MesaService {
   getChangeId(branch: string): Promise<string | null>;
   getDiff(baseChangeId: string, headChangeId: string): Promise<import("../../shared/types.js").MesaDiffResponse | null>;
   getActivity(limit: number): Promise<import("../../shared/types.js").MesaActivityEvent[]>;
+  // Webhook targets
+  listWebhookTargets(): Promise<import("../../shared/types.js").WebhookTarget[]>;
+  createWebhookTarget(url: string, name?: string, events?: string[]): Promise<import("../../shared/types.js").WebhookTarget>;
+  deleteWebhookTarget(id: string): Promise<void>;
+  // Rich change history
+  listChanges(limit: number): Promise<import("../../shared/types.js").MesaChange[]>;
+  // Repository tags
+  getRepoTags(): Promise<import("../../shared/types.js").RepoTags>;
+  setRepoTags(tags: Record<string, string | null>): Promise<import("../../shared/types.js").RepoTags>;
 }
 
 class LocalFsMesa implements MesaService {
@@ -88,9 +97,29 @@ class LocalFsMesa implements MesaService {
   async getActivity(_limit: number): Promise<import("../../shared/types.js").MesaActivityEvent[]> {
     return [];
   }
+
+  async listWebhookTargets(): Promise<import("../../shared/types.js").WebhookTarget[]> {
+    return [];
+  }
+  async createWebhookTarget(_url: string, _name?: string, _events?: string[]): Promise<import("../../shared/types.js").WebhookTarget> {
+    throw new Error("Webhook targets require the Mesa SDK backend");
+  }
+  async deleteWebhookTarget(_id: string): Promise<void> {}
+
+  async listChanges(_limit: number): Promise<import("../../shared/types.js").MesaChange[]> {
+    return [];
+  }
+
+  async getRepoTags(): Promise<import("../../shared/types.js").RepoTags> {
+    return {};
+  }
+  async setRepoTags(_tags: Record<string, string | null>): Promise<import("../../shared/types.js").RepoTags> {
+    return {};
+  }
 }
 
 import { SdkMesa } from "./mesa-sdk.js";
+import { MountedMesa } from "./mesa-mount.js";
 
 let currentBackend: MesaService = new LocalFsMesa();
 
@@ -98,10 +127,17 @@ export function getMesa(): MesaService {
   return currentBackend;
 }
 
-export async function reinitializeMesa(apiKey?: string): Promise<void> {
+export type BackendChoice = "local-fs" | "mesa-sdk" | "mesa-mount";
+
+export async function reinitializeMesa(apiKey?: string, backend?: BackendChoice): Promise<void> {
   if (apiKey && apiKey.length > 0) {
-    console.log("Using Mesa SDK backend (api.mesa.dev)");
-    currentBackend = new SdkMesa(apiKey);
+    if (backend === "mesa-mount") {
+      console.log("Using Mesa fs.mount backend (native filesystem)");
+      currentBackend = new MountedMesa(apiKey);
+    } else {
+      console.log("Using Mesa SDK backend (api.mesa.dev)");
+      currentBackend = new SdkMesa(apiKey);
+    }
   } else {
     console.log("Using local filesystem backend (mesa-repo/)");
     currentBackend = new LocalFsMesa();

@@ -1,16 +1,24 @@
 import { useEffect, useState } from "react";
-import type { StorageBackend } from "../types.js";
+import type { StorageBackend, WebhookTarget, RepoTags as RepoTagsType } from "../types.js";
+import { WebhookTargets } from "./WebhookTargets.js";
+import { RepoTags } from "./RepoTags.js";
 
 interface SettingsPanelProps {
   open: boolean;
   onClose: () => void;
   backends: StorageBackend[];
   loading: boolean;
-  mesaInfo?: { org?: string; repo?: string; whoami?: string };
+  mesaInfo?: { org?: string; repo?: string; whoami?: string; tags?: Record<string, string> };
   keys: { mesa: boolean; anthropic: boolean };
   onSaveKeys: (keys: { mesa?: string; anthropic?: string }) => Promise<{ ok: boolean; error?: string }>;
   onClearKeys: () => Promise<{ ok: boolean }>;
   onReset: () => Promise<{ ok: boolean }>;
+  onSwitchBackend: (backend: string) => Promise<{ ok: boolean }>;
+  webhookTargets: WebhookTarget[];
+  onCreateWebhookTarget: (url: string, name?: string, events?: string[]) => Promise<{ ok: boolean; error?: string }>;
+  onDeleteWebhookTarget: (id: string) => Promise<void>;
+  repoTags: RepoTagsType;
+  onUpdateRepoTags: (tags: Record<string, string | null>) => Promise<{ ok: boolean }>;
 }
 
 export function SettingsPanel({
@@ -23,6 +31,12 @@ export function SettingsPanel({
   onSaveKeys,
   onClearKeys,
   onReset,
+  onSwitchBackend,
+  webhookTargets,
+  onCreateWebhookTarget,
+  onDeleteWebhookTarget,
+  repoTags,
+  onUpdateRepoTags,
 }: SettingsPanelProps) {
   const [anthropicInput, setAnthropicInput] = useState("");
   const [mesaInput, setMesaInput] = useState("");
@@ -192,7 +206,13 @@ export function SettingsPanel({
                       )}
                     </div>
                     <button
-                      disabled={!b.available || b.active}
+                      disabled={!b.available || b.active || saving}
+                      onClick={async () => {
+                        setSaving(true);
+                        setError(null);
+                        await onSwitchBackend(b.name);
+                        setSaving(false);
+                      }}
                       className="font-mono text-xs uppercase tracking-widest text-ink border border-line px-3 py-1.5 hover:border-ink hover:bg-ink hover:text-canvas transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-ink"
                       title={
                         b.active
@@ -228,13 +248,26 @@ export function SettingsPanel({
                   <span>{mesaInfo.whoami}</span>
                 </div>
               </div>
+
+              <RepoTags
+                tags={repoTags}
+                onUpdate={onUpdateRepoTags}
+                isMesaBackend={!!mesaInfo}
+              />
             </div>
           )}
+
+          <WebhookTargets
+            targets={webhookTargets}
+            onCreate={onCreateWebhookTarget}
+            onDelete={onDeleteWebhookTarget}
+            isMesaBackend={!!mesaInfo}
+          />
 
           <div className="mt-10 pt-6 border-t border-line">
             <div className="section-label mb-3">How the swap works</div>
             <p className="serif-quote text-sm text-mute leading-relaxed">
-              Every Mesa operation in this app — read, write, branch, merge, list — goes through a single <span className="font-mono not-italic text-ink-2">MesaService</span> interface. Switching backends replaces the implementation behind that interface. No agent code, no API route, no UI component changes.
+              Every Mesa operation in this app — read, write, branch, merge, list — goes through a single <span className="font-mono not-italic text-ink-2">MesaService</span> interface. Three implementations exist: local filesystem, REST API (<span className="font-mono not-italic text-ink-2">SdkMesa</span>), and native NAPI mount (<span className="font-mono not-italic text-ink-2">MountedMesa</span>). Switching replaces the implementation — no agent code, no UI changes.
             </p>
           </div>
 

@@ -14,6 +14,9 @@ export type {
   MesaDiffResponse,
   MesaActivityEvent,
   KeyStatus,
+  WebhookTarget,
+  MesaChange,
+  RepoTags,
 } from "@shared/types.js";
 
 export interface PortfolioWithPrices {

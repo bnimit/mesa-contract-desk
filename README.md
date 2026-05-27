@@ -94,7 +94,7 @@ Optionally add a **Mesa API key** to switch from the local filesystem backend to
 │  Browser (React + Tailwind)                                 │
 │  ┌──────────────┐ ┌──────────────┐ ┌──────────────────────┐ │
 │  │ Portfolio     │ │ Branch viz + │ │ Settings Panel       │ │
-│  │ display       │ │ agent cards  │ │ API keys, backend    │ │
+│  │ display       │ │ agent cards  │ │ keys, backends, tags │ │
 │  └──────┬───────┘ └──────┬───────┘ └──────────┬───────────┘ │
 │         │                │                     │             │
 │  ┌──────┴────────────────┴─────────────────────┴──────────┐  │
@@ -105,15 +105,16 @@ Optionally add a **Mesa API key** to switch from the local filesystem backend to
 ┌───────────────────────────┼──────────────────────────────────┐
 │  Express Server           │                                  │
 │  ┌────────────────────────┴─────────────────────────────┐    │
-│  │ Routes: analyze, merge, replay, settings, reset      │    │
+│  │ Routes: analyze, merge, replay, settings, reset,     │    │
+│  │         changes, repo/tags, webhooks/targets          │    │
 │  └──────────────────────┬───────────────────────────────┘    │
 │                         │                                    │
 │  ┌──────────────────────┼───────────────────────────────┐    │
 │  │ MesaService interface                                │    │
-│  │ ┌─────────────┐  ┌──────────────┐                    │    │
-│  │ │  LocalFsMesa │  │   SdkMesa    │ ← swappable       │    │
-│  │ │ (fallback)   │  │ (Mesa API)   │   at runtime       │    │
-│  │ └─────────────┘  └──────────────┘                    │    │
+│  │ ┌─────────────┐ ┌──────────────┐ ┌──────────────┐   │    │
+│  │ │ LocalFsMesa  │ │   SdkMesa    │ │ MountedMesa  │   │    │
+│  │ │ (fallback)   │ │  (REST API)  │ │ (fs.mount)   │   │    │
+│  │ └─────────────┘ └──────────────┘ └──────────────┘   │    │
 │  └──────────────────────────────────────────────────────┘    │
 │                                                              │
 │  ┌────────────┐ ┌─────────────┐ ┌───────────────────┐       │
@@ -123,14 +124,36 @@ Optionally add a **Mesa API key** to switch from the local filesystem backend to
 └──────────────────────────────────────────────────────────────┘
 ```
 
-### Backend Swapping
+### Three Backends
 
-The entire app runs through a single `MesaService` interface — `readFile`, `writeFile`, `createBranch`, `mergeBranch`, `deleteBranch`, `getDiff`, etc. Two implementations exist:
+The entire app runs through a single `MesaService` interface — `readFile`, `writeFile`, `createBranch`, `mergeBranch`, `deleteBranch`, `getDiff`, etc. Three implementations exist:
 
 - **LocalFsMesa** — Simulates branches with directories on disk. Fully functional, zero dependencies.
-- **SdkMesa** — Real Mesa API. Bookmarks = branches, changes = commits, content API for reads/writes, diffs API for comparisons.
+- **SdkMesa** — Real Mesa REST API. Bookmarks = branches, changes = commits, content API for reads/writes, diffs API for comparisons.
+- **MountedMesa** — Mesa's native NAPI filesystem (`MesaFileSystem`). Same cloud storage as SdkMesa, but accessed through a POSIX-style interface via `fs.mount`. Uses `change.edit()` to switch branch context.
 
-Adding a Mesa API key in Settings switches the backend at runtime. No code changes, no restart.
+Switching backends in Settings takes effect immediately — no code changes, no restart.
+
+## Mesa SDK Parity
+
+How much of the Mesa SDK (`@mesadev/sdk` v0.28.2) this demo exercises:
+
+| SDK Resource | Methods Used | Where in Demo |
+|---|---|---|
+| **Repos** | `get`, `create`, `delete`, `update` | Init, reset, repo tags |
+| **Bookmarks** | `list`, `create`, `delete`, `move`, `merge` | Fork, merge, delete branches |
+| **Changes** | `list`, `create`, `get` | Write files, commit history, change timeline |
+| **Content** | `get` (file + directory) | Read files, list directory entries |
+| **Diffs** | `get` | Compare agent branch vs main |
+| **Webhook Targets** | `list`, `create`, `delete` | Settings panel CRUD |
+| **Webhooks** | `on`, `receive` | Inbound webhook events → activity feed |
+| **fs.mount** | `MesaFileSystem.create` | Third backend (`MountedMesa`) |
+| **fs.mount / change** | `change.edit`, `change.current` | Branch switching in mounted filesystem |
+| **fs.mount / bookmark** | `bookmark.list` | List bookmarks via filesystem API |
+| **Org** | `resolveOrg` | Resolve org slug on init |
+| **Auth** | `whoami` | Validate API key, show connection info |
+| API Keys | — | Not used (keys managed outside the demo) |
+| Repo tag bulk update | — | Not used (single-repo demo) |
 
 ## Features
 
@@ -140,9 +163,12 @@ Adding a Mesa API key in Settings switches the backend at runtime. No code chang
 - **Compact proposal cards** — trade bullets in plain English, portfolio impact at a glance
 - **True replay** — instantly view any past round's original proposals with the chosen strategy highlighted
 - **Live activity feed** — SSE-powered stream of every Mesa operation (branch, write, merge)
+- **Change timeline** — full Mesa commit log with expandable change details (hash, author, timestamp)
+- **Three swappable backends** — local filesystem, Mesa REST API, or Mesa fs.mount — switch live in Settings
+- **Webhook target management** — register, list, and delete webhook endpoints from Settings
+- **Repository tags** — key-value metadata on the Mesa repo, editable from Settings
 - **Zero-config setup** — API keys entered in UI, encrypted in local SQLite, no .env needed
 - **Demo reset** — clear all history and start fresh from Settings
-- **Webhook support** — Mesa webhooks feed external activity into the live feed
 
 ## Tech Stack
 

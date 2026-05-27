@@ -124,3 +124,25 @@ export interface KeyStatus {
   mesa: boolean;
   anthropic: boolean;
 }
+
+// ── Webhook Targets ──────────────────────────────────────────────────
+export interface WebhookTarget {
+  id: string;
+  name: string | null;
+  url: string;
+  events: string[];
+  createdAt: string;
+}
+
+// ── Change History (rich commit log) ─────────────────────────────────
+export interface MesaChange {
+  id: string;
+  message: string;
+  author: { name: string; email: string };
+  timestamp: number;
+  isConflicted: boolean;
+  filesChanged?: number;
+}
+
+// ── Repository Tags ──────────────────────────────────────────────────
+export type RepoTags = Record<string, string>;

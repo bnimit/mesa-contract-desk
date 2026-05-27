@@ -5,6 +5,9 @@ import {
   useHistory,
   useSettings,
   usePlaybook,
+  useWebhookTargets,
+  useChanges,
+  useRepoTags,
 } from "./hooks/useApi.js";
 import { useMesaEvents } from "./hooks/useMesaEvents.js";
 import { Portfolio } from "./components/Portfolio.js";
@@ -14,13 +17,17 @@ import { SettingsPanel } from "./components/SettingsPanel.js";
 import { HistoryTimeline } from "./components/HistoryTimeline.js";
 import { PlaybookView } from "./components/PlaybookView.js";
 import { ActivityFeed } from "./components/ActivityFeed.js";
+import { ChangeTimeline } from "./components/ChangeTimeline.js";
 
 export default function App() {
   const { portfolio, loading, refresh: refreshPortfolio } = usePortfolio();
   const { rounds, refresh: refreshHistory } = useHistory();
-  const { backends, loading: settingsLoading, mesaInfo, keys, saveKeys, clearKeys, resetDemo } = useSettings();
+  const { backends, loading: settingsLoading, mesaInfo, keys, saveKeys, clearKeys, resetDemo, switchBackend } = useSettings();
   const [refreshKey, setRefreshKey] = useState(0);
   const { content: playbookContent } = usePlaybook(refreshKey);
+  const { targets: webhookTargets, create: createWebhookTarget, remove: deleteWebhookTarget } = useWebhookTargets();
+  const { changes, loading: changesLoading } = useChanges(refreshKey);
+  const { tags: repoTags, update: updateRepoTags } = useRepoTags();
 
   const onComplete = useCallback(() => {
     refreshPortfolio();
@@ -265,6 +272,18 @@ export default function App() {
             <ActivityFeed events={mesaEvents} connected={sseConnected} />
           </div>
         </div>
+
+        {/* Section 06: Change Log */}
+        <div className="hairline mb-20" />
+        <div className="grid grid-cols-12 gap-8 mb-20">
+          <aside className="col-span-12 md:col-span-2">
+            <div className="section-number">06</div>
+            <div className="section-label mt-4">Change log</div>
+          </aside>
+          <div className="col-span-12 md:col-span-10">
+            <ChangeTimeline changes={changes} loading={changesLoading} />
+          </div>
+        </div>
       </main>
 
       {/* Footer */}
@@ -311,6 +330,20 @@ export default function App() {
           }
           return result;
         }}
+        onSwitchBackend={async (backend) => {
+          const result = await switchBackend(backend);
+          if (result.ok) {
+            refreshPortfolio();
+            refreshHistory();
+            setRefreshKey((k) => k + 1);
+          }
+          return result;
+        }}
+        webhookTargets={webhookTargets}
+        onCreateWebhookTarget={createWebhookTarget}
+        onDeleteWebhookTarget={deleteWebhookTarget}
+        repoTags={repoTags}
+        onUpdateRepoTags={updateRepoTags}
       />
     </div>
   );

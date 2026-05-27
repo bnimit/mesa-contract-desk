@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getMesa, reinitializeMesa } from "../services/mesa.js";
+import { getMesa, reinitializeMesa, type BackendChoice } from "../services/mesa.js";
 import { hasKey, setKey, deleteKey, getKey } from "../services/config.js";
 import { hasAnthropicKey, reinitializeAnthropic, clearAnthropic } from "../services/claude.js";
 import { emitActivity } from "./events.js";
@@ -298,24 +298,34 @@ apiRouter.get("/settings", async (_req, res) => {
       name: "mesa-sdk",
       label: "Mesa SDK · api.mesa.dev",
       description:
-        "Real branches on Mesa's versioned filesystem. Sub-50ms reads, instant forks, full audit trail. Connected via MESA_API_KEY.",
+        "Real branches on Mesa's versioned filesystem. Sub-50ms reads, instant forks, full audit trail via REST API.",
       available: hasMesaKey,
       active: active === "mesa-sdk",
     },
+    {
+      name: "mesa-mount",
+      label: "Mesa fs.mount · native",
+      description:
+        "Native NAPI filesystem backed by Mesa cloud. Uses MesaFileSystem — same cloud storage, POSIX-style read/write interface.",
+      available: hasMesaKey,
+      active: active === "mesa-mount",
+    },
   ];
 
-  let mesaInfo: { org?: string; repo?: string; whoami?: string } | undefined;
-  if (active === "mesa-sdk") {
+  let mesaInfo: { org?: string; repo?: string; whoami?: string; tags?: Record<string, string> } | undefined;
+  if (active === "mesa-sdk" || active === "mesa-mount") {
     try {
       const mesaApiKey = getKey("MESA_API_KEY");
       if (mesaApiKey) {
         const { Mesa } = await import("@mesadev/sdk");
         const client = new Mesa({ apiKey: mesaApiKey });
         const who = await client.whoami();
+        const repo = await client.repos.get({ repo: "portfolio-advisor" }).catch(() => null);
         mesaInfo = {
           org: who.org.slug,
           repo: "portfolio-advisor",
           whoami: who.key_name ?? who.key_id ?? "unknown",
+          tags: repo?.tags,
         };
       }
     } catch { /* skip */ }
@@ -330,9 +340,10 @@ apiRouter.get("/settings", async (_req, res) => {
 
 apiRouter.post("/settings/keys", async (req, res) => {
   try {
-    const { mesa: mesaKey, anthropic: anthropicKey } = req.body as {
+    const { mesa: mesaKey, anthropic: anthropicKey, backend } = req.body as {
       mesa?: string;
       anthropic?: string;
+      backend?: BackendChoice;
     };
 
     if (anthropicKey) {
@@ -360,13 +371,21 @@ apiRouter.post("/settings/keys", async (req, res) => {
         return;
       }
       setKey("MESA_API_KEY", mesaKey);
-      await reinitializeMesa(mesaKey);
+      await reinitializeMesa(mesaKey, backend);
+    }
+
+    if (backend && !mesaKey) {
+      const existingMesaKey = getKey("MESA_API_KEY");
+      if (existingMesaKey) {
+        await reinitializeMesa(existingMesaKey, backend);
+      }
     }
 
     const active = getMesa().backendName();
+    const hasMesa = hasKey("MESA_API_KEY");
     res.json({
       ok: true,
-      keys: { mesa: hasKey("MESA_API_KEY"), anthropic: hasKey("ANTHROPIC_API_KEY") },
+      keys: { mesa: hasMesa, anthropic: hasKey("ANTHROPIC_API_KEY") },
       backends: [
         {
           name: "local-fs",
@@ -378,14 +397,46 @@ apiRouter.post("/settings/keys", async (req, res) => {
         {
           name: "mesa-sdk",
           label: "Mesa SDK · api.mesa.dev",
-          description: "Real branches on Mesa's versioned filesystem.",
-          available: hasKey("MESA_API_KEY"),
+          description: "Real branches on Mesa's versioned filesystem via REST API.",
+          available: hasMesa,
           active: active === "mesa-sdk",
+        },
+        {
+          name: "mesa-mount",
+          label: "Mesa fs.mount · native",
+          description: "Native NAPI filesystem backed by Mesa cloud storage.",
+          available: hasMesa,
+          active: active === "mesa-mount",
         },
       ],
     });
   } catch (error) {
     res.status(500).json({ error: "Failed to save keys" });
+  }
+});
+
+apiRouter.post("/settings/backend", async (req, res) => {
+  try {
+    const { backend } = req.body as { backend: BackendChoice };
+    if (!backend) {
+      res.status(400).json({ error: "backend name required" });
+      return;
+    }
+    if (backend === "local-fs") {
+      await reinitializeMesa();
+    } else {
+      const mesaKey = getKey("MESA_API_KEY");
+      if (!mesaKey) {
+        res.status(400).json({ error: "Mesa API key required for this backend" });
+        return;
+      }
+      await reinitializeMesa(mesaKey, backend);
+    }
+    emitActivity("file_written", `Backend switched to ${backend}`);
+    res.json({ ok: true, active: getMesa().backendName() });
+  } catch (error) {
+    console.error("Backend switch failed:", error);
+    res.status(500).json({ error: "Failed to switch backend" });
   }
 });
 
@@ -444,5 +495,79 @@ apiRouter.get("/activity", async (req, res) => {
     res.json({ events });
   } catch (error) {
     res.status(500).json({ error: "Failed to load activity" });
+  }
+});
+
+// ── Webhook Targets ────────────────────────────────────────────────
+
+apiRouter.get("/webhooks/targets", async (_req, res) => {
+  try {
+    const targets = await getMesa().listWebhookTargets();
+    res.json({ targets });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to list webhook targets" });
+  }
+});
+
+apiRouter.post("/webhooks/targets", async (req, res) => {
+  try {
+    const { url, name, events } = req.body as { url: string; name?: string; events?: string[] };
+    if (!url) {
+      res.status(400).json({ error: "url is required" });
+      return;
+    }
+    const target = await getMesa().createWebhookTarget(url, name, events);
+    emitActivity("file_written", `Webhook target created: ${url}`);
+    res.json({ ok: true, target });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to create webhook target" });
+  }
+});
+
+apiRouter.delete("/webhooks/targets/:id", async (req, res) => {
+  try {
+    await getMesa().deleteWebhookTarget(req.params.id);
+    emitActivity("file_written", "Webhook target deleted");
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to delete webhook target" });
+  }
+});
+
+// ── Rich Change History ────────────────────────────────────────────
+
+apiRouter.get("/changes", async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 30;
+    const changes = await getMesa().listChanges(limit);
+    res.json({ changes });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to list changes" });
+  }
+});
+
+// ── Repository Tags ────────────────────────────────────────────────
+
+apiRouter.get("/repo/tags", async (_req, res) => {
+  try {
+    const tags = await getMesa().getRepoTags();
+    res.json({ tags });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to get repo tags" });
+  }
+});
+
+apiRouter.post("/repo/tags", async (req, res) => {
+  try {
+    const { tags } = req.body as { tags: Record<string, string | null> };
+    if (!tags) {
+      res.status(400).json({ error: "tags object required" });
+      return;
+    }
+    const updated = await getMesa().setRepoTags(tags);
+    emitActivity("file_written", `Repo tags updated: ${Object.keys(tags).join(", ")}`);
+    res.json({ ok: true, tags: updated });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update repo tags" });
   }
 });
