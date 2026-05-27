@@ -38,6 +38,7 @@ export default function App() {
   const { state, analyze, replay, merge, dismiss } = useAnalysis(onComplete);
   const { events: mesaEvents, connected: sseConnected } = useMesaEvents();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [hasOpenedSettings, setHasOpenedSettings] = useState(false);
   const [showComplete, setShowComplete] = useState(false);
   const [lastMergedAgent, setLastMergedAgent] = useState<string | undefined>();
   const [vizGeneration, setVizGeneration] = useState(0);
@@ -115,14 +116,14 @@ export default function App() {
             <span className="font-mono text-xs text-mute hidden sm:inline">v0.2 · alpha</span>
             <div className="relative">
               <button
-                onClick={() => setSettingsOpen(true)}
+                onClick={() => { setSettingsOpen(true); setHasOpenedSettings(true); }}
                 className="text-ink-2 hover:text-mesa transition-colors p-1"
                 aria-label="Open settings"
                 title="Settings"
               >
                 <SettingsCog />
               </button>
-              {!keys.anthropic && !settingsOpen && (
+              {!keys.anthropic && !settingsOpen && !hasOpenedSettings && (
                 <div className="absolute right-0 top-full mt-2 settings-callout">
                   <span className="absolute -top-1 right-3 w-2 h-2 bg-ink rotate-45" />
                   <div className="bg-ink text-canvas px-4 py-2.5 font-mono text-[11px] tracking-wide whitespace-nowrap">
@@ -130,7 +131,7 @@ export default function App() {
                   </div>
                 </div>
               )}
-              {!keys.anthropic && (
+              {!keys.anthropic && !hasOpenedSettings && (
                 <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-mesa settings-pulse" />
               )}
             </div>
@@ -168,7 +169,7 @@ export default function App() {
               </button>
               {!keys.anthropic && (
                 <button
-                  onClick={() => setSettingsOpen(true)}
+                  onClick={() => { setSettingsOpen(true); setHasOpenedSettings(true); }}
                   className="section-label text-mesa hover:underline cursor-pointer mt-3 block text-left"
                 >
                   Add your Anthropic API key in Settings to begin →
