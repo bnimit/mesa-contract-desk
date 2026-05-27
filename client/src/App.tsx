@@ -39,6 +39,7 @@ export default function App() {
   const { events: mesaEvents, connected: sseConnected } = useMesaEvents();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [hasOpenedSettings, setHasOpenedSettings] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showComplete, setShowComplete] = useState(false);
   const [lastMergedAgent, setLastMergedAgent] = useState<string | undefined>();
   const [vizGeneration, setVizGeneration] = useState(0);
@@ -114,6 +115,18 @@ export default function App() {
               </div>
             )}
             <span className="font-mono text-xs text-mute hidden sm:inline">v0.2 · alpha</span>
+            {(keys.mesa || keys.anthropic) && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowClearConfirm(true)}
+                  className="text-mute hover:text-down transition-colors p-1"
+                  aria-label="Clear stored API keys"
+                  title="Clear stored keys"
+                >
+                  <KeyClearIcon />
+                </button>
+              </div>
+            )}
             <div className="relative">
               <button
                 onClick={() => { setSettingsOpen(true); setHasOpenedSettings(true); }}
@@ -325,6 +338,35 @@ export default function App() {
         </div>
       </footer>
 
+      {/* Clear keys confirmation */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 bg-ink/30 z-[60] flex items-center justify-center" onClick={() => setShowClearConfirm(false)}>
+          <div className="bg-canvas border border-line p-8 max-w-sm mx-4 reveal" onClick={(e) => e.stopPropagation()}>
+            <div className="section-label text-down mb-3">Clear all API keys?</div>
+            <p className="serif-quote text-sm text-ink-2 leading-relaxed mb-6">
+              This will remove your Anthropic and Mesa keys from the encrypted store and reset the backend to local filesystem.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={async () => {
+                  await clearKeys();
+                  setShowClearConfirm(false);
+                }}
+                className="font-mono text-xs uppercase tracking-widest px-4 py-2 bg-down text-canvas hover:bg-down/80 transition-colors"
+              >
+                Clear keys
+              </button>
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="font-mono text-xs uppercase tracking-widest px-4 py-2 border border-line text-ink hover:border-ink transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Settings flyout */}
       <SettingsPanel
         open={settingsOpen}
@@ -360,6 +402,25 @@ export default function App() {
         onUpdateRepoTags={updateRepoTags}
       />
     </div>
+  );
+}
+
+function KeyClearIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
+      <line x1="18" y1="18" x2="22" y2="22" />
+      <line x1="22" y1="18" x2="18" y2="22" />
+    </svg>
   );
 }
 
