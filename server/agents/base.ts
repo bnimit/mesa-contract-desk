@@ -53,6 +53,16 @@ export async function runAgent(
       output.actions = validActions;
     }
 
+    if (output.actions.length === 0) {
+      output.actions = portfolio.portfolio.map((h) => ({
+        ticker: h.ticker,
+        action: "hold" as const,
+        shares: h.shares,
+        reason: "No strong signal, staying put",
+        confidence: "low" as const,
+      }));
+    }
+
     const proposedPortfolio = applyActions(portfolio, output.actions, currentPrices);
 
     // Append this agent's playbook entry to its own branch.

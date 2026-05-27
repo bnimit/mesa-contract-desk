@@ -92,9 +92,16 @@ interface StoredRound {
     agentName: string;
     branch: string;
     status: "success" | "error";
+    error?: string;
     proposal?: {
+      agentName: string;
       strategy: string;
-      actions: { ticker: string; action: "buy" | "sell" | "hold"; shares: number }[];
+      actions: { ticker: string; action: "buy" | "sell" | "hold"; shares: number; reason: string; confidence: "high" | "medium" | "low" }[];
+      reasoning: string;
+      newMarketValue: number;
+      cashBefore: number;
+      cashAfter: number;
+      cashDelta: number;
     };
   }[];
   mergedAgent?: string;
@@ -111,14 +118,23 @@ export async function saveRoundSnapshot(round: AnalysisRound, currentPrices: Map
       agentName: r.agentName,
       branch: r.branch,
       status: r.status,
+      error: r.error,
       proposal: r.proposal
         ? {
+            agentName: r.proposal.agentName,
             strategy: r.proposal.strategy,
             actions: r.proposal.actions.map((a) => ({
               ticker: a.ticker,
               action: a.action,
               shares: a.shares,
+              reason: a.reason,
+              confidence: a.confidence,
             })),
+            reasoning: r.proposal.reasoning,
+            newMarketValue: r.proposal.newMarketValue,
+            cashBefore: r.proposal.cashBefore,
+            cashAfter: r.proposal.cashAfter,
+            cashDelta: r.proposal.cashDelta,
           }
         : undefined,
     })),
@@ -129,6 +145,15 @@ export async function saveRoundSnapshot(round: AnalysisRound, currentPrices: Map
     `${HISTORY_DIR}/${round.timestamp}.json`,
     JSON.stringify(snapshot, null, 2)
   );
+}
+
+export async function loadRoundSnapshot(timestamp: number): Promise<StoredRound | null> {
+  try {
+    const raw = await getMesa().readFile("main", `${HISTORY_DIR}/${timestamp}.json`);
+    return JSON.parse(raw) as StoredRound;
+  } catch {
+    return null;
+  }
 }
 
 export async function listHistoryRounds(currentPrices: Map<string, number>): Promise<HistoryRoundSummary[]> {

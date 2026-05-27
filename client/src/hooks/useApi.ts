@@ -69,20 +69,7 @@ export function useAnalysis(onComplete?: () => void) {
         });
         if (!res.ok) throw new Error("Replay failed");
         const data = await res.json();
-        let diffs: Record<string, MesaDiffEntry[]> | undefined;
-        if (data.changeIds) {
-          diffs = {};
-          for (const [branch, ids] of Object.entries(data.changeIds as Record<string, { base: string; head: string }>)) {
-            if (ids.base && ids.head) {
-              try {
-                const diffRes = await fetch(`/api/diff?base=${ids.base}&head=${ids.head}`);
-                const diffData = await diffRes.json();
-                if (diffData.diff) diffs[branch] = diffData.diff.entries;
-              } catch { /* skip */ }
-            }
-          }
-        }
-        setState({ status: "done", timestamp: data.timestamp, results: data.results, diffs });
+        setState({ status: "done", timestamp: data.timestamp, results: data.results, isReplay: true, mergedAgent: data.mergedAgent });
         onComplete?.();
       } catch (e) {
         setState({ status: "error", message: e instanceof Error ? e.message : "Unknown error" });

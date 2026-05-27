@@ -1,53 +1,34 @@
 import type { AgentResult, MesaDiffEntry } from "../types.js";
-import { PlaybookDiff } from "./PlaybookDiff.js";
-import { DiffView } from "./DiffView.js";
 
 interface AgentCardProps {
   result: AgentResult;
   onAccept: () => void;
   diff?: MesaDiffEntry[];
+  readOnly?: boolean;
+  wasChosen?: boolean;
 }
 
-const AGENT_META: Record<string, { color: string; bg: string; label: string; sigil: string }> = {
-  Fundamentals: {
-    color: "text-fundamentals",
-    bg: "bg-fundamentals",
-    label: "Fundamental analysis",
-    sigil: "◆",
-  },
-  Sentiment: {
-    color: "text-sentiment",
-    bg: "bg-sentiment",
-    label: "Market sentiment",
-    sigil: "●",
-  },
-  Technical: {
-    color: "text-technical",
-    bg: "bg-technical",
-    label: "Technical analysis",
-    sigil: "▲",
-  },
+const AGENT_META: Record<string, { color: string; label: string; sigil: string }> = {
+  Fundamentals: { color: "text-fundamentals", label: "Fundamental analysis", sigil: "◆" },
+  Sentiment:    { color: "text-sentiment",    label: "Market sentiment",     sigil: "●" },
+  Technical:    { color: "text-technical",     label: "Technical analysis",   sigil: "▲" },
 };
 
-export function AgentCard({ result, onAccept, diff }: AgentCardProps) {
-  const meta = AGENT_META[result.agentName] ?? {
-    color: "text-mute",
-    bg: "bg-mute",
-    label: "Agent",
-    sigil: "◇",
-  };
+function fmtCash(n: number) {
+  return "$" + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+export function AgentCard({ result, onAccept, readOnly, wasChosen }: AgentCardProps) {
+  const meta = AGENT_META[result.agentName] ?? { color: "text-mute", label: "Agent", sigil: "◇" };
 
   if (result.status === "error") {
     return (
-      <article className="bg-canvas border border-line p-8 flex flex-col w-full">
-        <header className="flex items-center gap-3 mb-6">
-          <span className={`text-2xl ${meta.color}`}>{meta.sigil}</span>
-          <div>
-            <h3 className="font-mono text-sm tracking-wide uppercase">{result.agentName}</h3>
-            <div className="section-label mt-0.5">{meta.label}</div>
-          </div>
+      <article className="bg-canvas border border-line p-6 flex flex-col w-full">
+        <header className="flex items-center gap-3 mb-4">
+          <span className={`text-xl ${meta.color}`}>{meta.sigil}</span>
+          <h3 className="font-mono text-sm tracking-wide uppercase">{result.agentName}</h3>
         </header>
-        <div className="border border-down/30 bg-down/5 p-4 text-down text-sm font-mono">
+        <div className="border border-down/30 bg-down/5 p-3 text-down text-xs font-mono">
           {result.error}
         </div>
       </article>
@@ -55,179 +36,71 @@ export function AgentCard({ result, onAccept, diff }: AgentCardProps) {
   }
 
   const proposal = result.proposal!;
-  const branchLabel = result.branch.replace(/^agent\//, "");
 
   return (
-    <article className="bg-canvas border border-line p-8 flex flex-col w-full group hover:border-ink/30 transition-colors">
-      <header className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <span className={`text-2xl ${meta.color}`}>{meta.sigil}</span>
-            <div>
-              <h3 className="font-mono text-sm tracking-wide uppercase text-ink">
-                {result.agentName}
-              </h3>
-              <div className="section-label mt-0.5">{meta.label}</div>
-            </div>
-          </div>
+    <article className={`bg-canvas border p-6 flex flex-col w-full group transition-colors ${wasChosen ? "border-ink border-t-[3px]" : "border-line hover:border-ink/30"}`}>
+      {/* Header */}
+      <header className="flex items-center gap-3 mb-4">
+        <span className={`text-xl ${meta.color}`}>{meta.sigil}</span>
+        <div className="flex-1">
+          <h3 className="font-mono text-sm tracking-wide uppercase text-ink">{result.agentName}</h3>
+          <div className="section-label mt-0.5">{meta.label}</div>
         </div>
-
-        <div className="flex items-center gap-2 text-xs font-mono text-mute">
-          <span>branch</span>
-          <span className="text-ink-2">/</span>
-          <span className={meta.color}>{branchLabel}</span>
-        </div>
+        {wasChosen && (
+          <span className="font-mono text-[10px] tracking-widest uppercase text-up border border-up/30 px-2 py-0.5">
+            Chosen
+          </span>
+        )}
       </header>
 
-      <blockquote className="serif-quote text-lg leading-snug text-ink-2 mb-6 pl-4 border-l-2 border-line-2">
-        "{proposal.strategy}"
-      </blockquote>
-
-      {proposal.memory && proposal.memory.reviewed > 0 && (
-        <div className="mb-6 border border-line p-3 bg-canvas-2/40">
-          <div className="section-label mb-1.5 flex items-center gap-2">
-            <span className="text-mesa">◇</span>
-            <span>Memory · Mesa history</span>
-          </div>
-          <div className="font-mono text-xs text-ink-2 leading-relaxed">
-            Reviewed{" "}
-            <span className="text-ink">{proposal.memory.reviewed}</span> past prediction
-            {proposal.memory.reviewed === 1 ? "" : "s"}
-            {proposal.memory.correct + proposal.memory.wrong > 0 && (
-              <>
-                {" · "}
-                <span className="text-up">{proposal.memory.correct} correct</span>
-                {" · "}
-                <span className="text-down">{proposal.memory.wrong} wrong</span>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {proposal.playbookEntry && (
-        <div className="mb-6">
-          <PlaybookDiff entry={proposal.playbookEntry} agentColor={meta.color} />
-        </div>
-      )}
-
-      {diff && diff.length > 0 && (
-        <details className="mb-6 group/diff">
-          <summary className="section-label cursor-pointer hover:text-ink transition-colors flex items-center gap-2">
-            <span>Mesa diff</span>
-            <span className="text-mute-2 group-open/diff:rotate-90 transition-transform">›</span>
-          </summary>
-          <div className="mt-3">
-            <DiffView entries={diff} agentColor={meta.color} />
-          </div>
-        </details>
-      )}
-
-      <div className="flex-1 mb-8">
-        <div className="section-label mb-4">Proposed trades</div>
-        <div className="space-y-3">
-          {proposal.actions.map((a, i) => (
-            <div key={i} className="border-b border-line pb-3 last:border-0 last:pb-0">
-              <div className="flex items-baseline justify-between gap-3 mb-1">
-                <div className="flex items-baseline gap-3">
-                  <span
-                    className={`font-mono text-xs tracking-widest uppercase ${
-                      a.action === "buy"
-                        ? "text-up"
-                        : a.action === "sell"
-                        ? "text-down"
-                        : "text-mute"
-                    }`}
-                  >
-                    {a.action}
-                  </span>
-                  <span className="font-mono text-base text-ink tracking-tight">
-                    {a.ticker}
-                  </span>
-                  {a.action !== "hold" && (
-                    <span className="font-mono tabular text-sm text-ink-2">
-                      × {a.shares}
-                    </span>
-                  )}
-                </div>
-                <span
-                  className={`font-mono text-[10px] tracking-widest uppercase ${
-                    a.confidence === "high"
-                      ? "text-up"
-                      : a.confidence === "medium"
-                      ? "text-ink-2"
-                      : "text-mute"
-                  }`}
-                >
-                  {a.confidence}
-                </span>
-              </div>
-              {a.reason && (
-                <p className="text-xs text-mute leading-relaxed mt-1">{a.reason}</p>
+      {/* Trade bullets */}
+      <ul className="space-y-2 mb-5 flex-1">
+        {proposal.actions.map((a, i) => (
+          <li key={i} className="flex items-start gap-2 text-sm">
+            <span
+              className={`font-mono text-[10px] tracking-widest uppercase mt-0.5 shrink-0 w-8 ${
+                a.action === "buy" ? "text-up" : a.action === "sell" ? "text-down" : "text-mute"
+              }`}
+            >
+              {a.action}
+            </span>
+            <span className="text-ink-2 leading-snug">
+              <span className="font-mono text-ink">{a.ticker}</span>
+              {a.action !== "hold" && (
+                <span className="font-mono text-mute"> ×{a.shares}</span>
               )}
-            </div>
-          ))}
+              {a.reason && <span className="text-mute"> — {a.reason}</span>}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      {/* Cash summary */}
+      <div className="border-t border-line pt-3 mb-4">
+        <div className="flex items-baseline justify-between text-xs font-mono">
+          <span className="text-mute">Portfolio</span>
+          <span className="text-ink tabular">{fmtCash(proposal.newMarketValue)}</span>
         </div>
+        {proposal.cashDelta !== 0 && (
+          <div className="flex items-baseline justify-between text-xs font-mono mt-1">
+            <span className="text-mute">Cash delta</span>
+            <span className={`tabular ${proposal.cashDelta > 0 ? "text-up" : "text-down"}`}>
+              {proposal.cashDelta > 0 ? "+" : ""}{fmtCash(proposal.cashDelta)}
+            </span>
+          </div>
+        )}
       </div>
 
-      <div className="mt-auto">
-        <div className="border-t border-line pt-4 mb-6">
-          <div className="flex items-baseline justify-between mb-2">
-            <div className="section-label">Cash after trades</div>
-            <div className="font-mono tabular text-xl text-ink">
-              ${proposal.cashAfter.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
-          </div>
-          <div className="flex items-baseline justify-between text-xs">
-            <span className="text-mute font-mono">
-              {proposal.cashDelta === 0 ? (
-                "no change · holds maintain position"
-              ) : (
-                <>
-                  was ${proposal.cashBefore.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </>
-              )}
-            </span>
-            {proposal.cashDelta !== 0 && (
-              <span
-                className={`font-mono tabular ${
-                  proposal.cashDelta > 0 ? "text-up" : "text-down"
-                }`}
-              >
-                {proposal.cashDelta > 0 ? "+" : ""}${proposal.cashDelta.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </span>
-            )}
-          </div>
-          <div className="mt-3 pt-3 border-t border-line/60 flex items-baseline justify-between text-xs text-mute">
-            <span className="font-mono">Total portfolio value</span>
-            <span className="font-mono tabular text-ink-2">
-              ${proposal.newMarketValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-          </div>
-        </div>
-
-        <details className="mb-6 group/details">
-          <summary className="section-label cursor-pointer hover:text-ink transition-colors flex items-center gap-2">
-            <span>Reasoning</span>
-            <span className="text-mute-2 group-open/details:rotate-90 transition-transform">›</span>
-          </summary>
-          <p className="serif-quote text-sm text-ink-2 leading-relaxed mt-3 pl-4 border-l border-line">
-            {proposal.reasoning}
-          </p>
-        </details>
-
+      {/* Choose button */}
+      {!readOnly && (
         <button
           onClick={onAccept}
-          className="group/btn w-full flex items-center justify-between gap-3 px-5 py-4 bg-ink text-canvas hover:bg-mesa transition-colors"
+          className="group/btn mt-auto w-full flex items-center justify-between gap-3 px-5 py-3 bg-ink text-canvas hover:bg-mesa transition-colors"
         >
-          <span className="font-mono text-xs tracking-widest uppercase">
-            Choose strategy
-          </span>
-          <span className="font-mono text-base group-hover/btn:translate-x-1 transition-transform">
-            →
-          </span>
+          <span className="font-mono text-xs tracking-widest uppercase">Choose strategy</span>
+          <span className="font-mono text-base group-hover/btn:translate-x-1 transition-transform">→</span>
         </button>
-      </div>
+      )}
     </article>
   );
 }

@@ -65,10 +65,8 @@ export class SdkMesa implements MesaService {
   // ── MesaService implementation ──────────────────────────────────────
 
   async init(): Promise<void> {
-    // Ensure the org is resolved (warm the SDK's internal cache).
     await this.client.resolveOrg();
 
-    // Ensure the repo exists; create it if missing.
     try {
       await this.client.repos.get({ repo: REPO_NAME });
     } catch (err: unknown) {
@@ -78,9 +76,21 @@ export class SdkMesa implements MesaService {
           default_bookmark: "main",
         });
         console.log(`Created Mesa repo "${REPO_NAME}"`);
-      } else {
-        throw err;
+        return;
       }
+      throw err;
+    }
+
+    // Ensure the "main" bookmark exists. If it was deleted (e.g. by a demo
+    // reset), recreate the repo so we get a clean "main" bookmark.
+    const res = await this.client.bookmarks.list({ repo: REPO_NAME });
+    if (!res.bookmarks.some((b) => b.name === "main")) {
+      console.log("Main bookmark missing — recreating repo");
+      await this.client.repos.delete({ repo: REPO_NAME });
+      await this.client.repos.create({
+        name: REPO_NAME,
+        default_bookmark: "main",
+      });
     }
   }
 

@@ -94,13 +94,15 @@ ${CONSTRAINTS_BLOCK}
 
 Respond with ONLY valid JSON in this exact format. The "playbookEntry" must use the exact header format specified above.
 
+IMPORTANT: Write "reason" in plain English a non-investor would understand. No jargon. Max 10 words. Example: "Price dropped 5%, good time to buy more" or "Stock keeps falling, cut losses now".
+
 {
-  "strategy": "one sentence summary of your approach, in first person",
+  "strategy": "one sentence summary of your approach, in first person, plain English",
   "playbookEntry": "## [Round ${String(input.nextRound).padStart(3, "0")} · ${input.agentName} · YYYY-MM-DD HH:MM]\\n\\n**Observed**: ...\\n\\n**Reasoning**: ...\\n\\n**Decision**: ...\\n\\n**Confidence**: high|medium|low",
   "actions": [
-    { "ticker": "AAPL", "action": "buy|sell|hold", "shares": 5, "reason": "why, in YOUR vocabulary", "confidence": "high|medium|low" }
+    { "ticker": "AAPL", "action": "buy|sell|hold", "shares": 5, "reason": "plain English, max 10 words", "confidence": "high|medium|low" }
   ],
-  "reasoning": "2-3 paragraph explanation strongly reflecting YOUR specialty"
+  "reasoning": "2-3 sentences in plain English explaining your thinking"
 }`,
       },
     ],

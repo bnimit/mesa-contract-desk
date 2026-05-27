@@ -9,7 +9,7 @@ import {
 import { useMesaEvents } from "./hooks/useMesaEvents.js";
 import { Portfolio } from "./components/Portfolio.js";
 import { ComparisonView } from "./components/ComparisonView.js";
-import { AnalysisLoading } from "./components/AnalysisLoading.js";
+import { BranchVisualization, type VizPhase } from "./components/BranchVisualization.js";
 import { SettingsPanel } from "./components/SettingsPanel.js";
 import { HistoryTimeline } from "./components/HistoryTimeline.js";
 import { PlaybookView } from "./components/PlaybookView.js";
@@ -31,15 +31,44 @@ export default function App() {
   const { state, analyze, replay, merge, dismiss } = useAnalysis(onComplete);
   const { events: mesaEvents, connected: sseConnected } = useMesaEvents();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showComplete, setShowComplete] = useState(false);
+  const [lastMergedAgent, setLastMergedAgent] = useState<string | undefined>();
+  const [vizGeneration, setVizGeneration] = useState(0);
 
-  // Belt-and-suspenders: whenever the analysis transitions to done or idle
-  // (i.e. after analyze, merge, or dismiss), refetch history + playbook.
   useEffect(() => {
     if (state.status === "done" || state.status === "idle") {
       refreshHistory();
       setRefreshKey((k) => k + 1);
     }
   }, [state.status, refreshHistory]);
+
+  useEffect(() => {
+    if (state.status === "loading") {
+      setVizGeneration((g) => g + 1);
+    }
+    if (state.status === "merging") {
+      setLastMergedAgent(state.agentName);
+    }
+    if (state.status === "idle" && lastMergedAgent) {
+      setShowComplete(true);
+      const timer = setTimeout(() => {
+        setShowComplete(false);
+        setLastMergedAgent(undefined);
+      }, 1800);
+      return () => clearTimeout(timer);
+    }
+  }, [state.status, lastMergedAgent]);
+
+  const vizPhase: VizPhase | null = (() => {
+    if (showComplete) return "complete";
+    if (state.status === "loading") {
+      const hasStarted = mesaEvents.some((e) => e.type === "analysis_started");
+      return hasStarted ? "analyze" : "fork";
+    }
+    if (state.status === "done") return "done";
+    if (state.status === "merging") return "merge";
+    return null;
+  })();
 
   const allBranches = state.status === "done" ? state.results.map((r) => r.branch) : [];
 
@@ -146,7 +175,7 @@ export default function App() {
         </div>
 
         {/* Section 02: Analysis */}
-        {(state.status === "loading" || state.status === "done" || state.status === "error" || state.status === "merging") && (
+        {(state.status === "loading" || state.status === "done" || state.status === "error" || state.status === "merging" || showComplete) && (
           <>
             <div className="hairline mb-20" />
             <div className="grid grid-cols-12 gap-8 mb-20">
@@ -155,8 +184,6 @@ export default function App() {
                 <div className="section-label mt-4">Analysis</div>
               </aside>
               <div className="col-span-12 md:col-span-10">
-                {state.status === "loading" && <AnalysisLoading events={mesaEvents} />}
-
                 {state.status === "error" && (
                   <div className="border border-down/30 bg-down/5 p-8 fade-in">
                     <div className="section-label text-down mb-2">Error</div>
@@ -170,18 +197,19 @@ export default function App() {
                   </div>
                 )}
 
-                {state.status === "merging" && (
-                  <div className="border border-line p-8 fade-in">
-                    <div className="flex items-center gap-3">
-                      <div className="w-4 h-4 border-2 border-mesa border-t-transparent rounded-full animate-spin" />
-                      <div>
-                        <div className="section-label text-mesa">Merging</div>
-                        <p className="font-mono text-sm text-ink-2 mt-1">
-                          Applying {state.agentName} strategy to main branch…
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                {vizPhase && (
+                  <BranchVisualization
+                    key={vizGeneration}
+                    phase={vizPhase}
+                    events={mesaEvents}
+                    winnerAgent={
+                      state.status === "merging"
+                        ? state.agentName
+                        : showComplete
+                        ? lastMergedAgent
+                        : undefined
+                    }
+                  />
                 )}
 
                 {state.status === "done" && (
@@ -189,7 +217,8 @@ export default function App() {
                     results={state.results}
                     onAccept={handleAccept}
                     onDismiss={handleDismiss}
-                    diffs={state.status === "done" ? state.diffs : undefined}
+                    isReplay={state.isReplay}
+                    mergedAgent={state.mergedAgent}
                   />
                 )}
               </div>

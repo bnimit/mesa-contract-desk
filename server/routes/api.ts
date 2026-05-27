@@ -8,7 +8,7 @@ import { runAgent } from "../agents/base.js";
 import { fundamentalsAgent } from "../agents/fundamentals.js";
 import { sentimentAgent } from "../agents/sentiment.js";
 import { technicalAgent } from "../agents/technical.js";
-import { saveRoundSnapshot, listHistoryRounds } from "../services/memory.js";
+import { saveRoundSnapshot, listHistoryRounds, loadRoundSnapshot } from "../services/memory.js";
 import { readPlaybook, appendEntry, diffAppended, writePlaybook } from "../services/playbook.js";
 import type { Portfolio, AnalysisRound, StorageBackend } from "../../shared/types.js";
 
@@ -138,22 +138,33 @@ apiRouter.get("/diff", async (req, res) => {
 
 apiRouter.post("/replay", async (req, res) => {
   try {
-    if (!hasAnthropicKey()) {
-      res.status(400).json({ error: "Anthropic API key not configured — add it in Settings" });
-      return;
-    }
     const { from } = req.body as { from: number };
     if (!from) {
       res.status(400).json({ error: "'from' timestamp required" });
       return;
     }
 
-    const snapshotBranch = `snapshot/${from}`;
-    // Restore main to the snapshot state.
-    await getMesa().mergeBranch(snapshotBranch, "main");
+    const stored = await loadRoundSnapshot(from);
+    if (!stored) {
+      res.status(404).json({ error: "Round not found" });
+      return;
+    }
 
-    const result = await runAnalysis(Date.now(), from);
-    res.json(result);
+    // Return the stored results as-is — no LLM call, just the historical data.
+    const results = stored.results.map((r) => ({
+      agentName: r.agentName,
+      branch: r.branch,
+      status: r.status,
+      error: r.error,
+      proposal: r.proposal
+        ? {
+            ...r.proposal,
+            proposedPortfolio: { portfolio: [], cash: r.proposal.cashAfter, lastUpdated: "" },
+          }
+        : undefined,
+    }));
+
+    res.json({ timestamp: stored.timestamp, results, replayedFrom: from, mergedAgent: stored.mergedAgent });
   } catch (error) {
     console.error("Replay failed:", error);
     res.status(500).json({ error: "Replay failed" });
