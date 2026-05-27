@@ -233,7 +233,7 @@ export function SettingsPanel({
 
           {mesaInfo && (
             <div className="mt-8 pt-6 border-t border-line">
-              <div className="section-label mb-3">Mesa connection</div>
+              <div className="section-label mb-3">Mesa connection <span className="text-mute normal-case tracking-normal">(via Mesa Auth API)</span></div>
               <div className="font-mono text-xs space-y-2 text-ink-2">
                 <div className="flex justify-between">
                   <span className="text-mute">org</span>
