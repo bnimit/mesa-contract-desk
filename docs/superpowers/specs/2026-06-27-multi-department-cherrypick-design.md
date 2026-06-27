@@ -78,6 +78,20 @@ Department identity (label + color) lives in one shared map reused by `CherryPic
 - **`BranchVisualization`:** the three forked branches are relabeled to the departments with their colors; on merge it animates the accepted branches contributing into a new `main` (keep the v1 merge modest and non-misfiring — the multi-branch merge choreography beyond that is a noted nice-to-have, not built now).
 - **Audit trail** is the star: e.g. "Liability → accepted **Finance** · Indemnification → accepted **Legal** · Data & IP → accepted **Security** · Auto-renewal → kept original · merged to v2" — a department-by-department record of who changed what and why.
 
+## Resolved design details (from gap review)
+
+1. **Ownership is enforced, not just requested.** After each department agent returns edits (real Claude or canned), the server **drops any edit whose `targetClauseId` is outside that department's owned set** (Security is additionally allowed to `insert`). This guarantees clean division of labor regardless of model behavior. "Owns" = *allowed to edit*; a department need not edit every owned clause, and clauses no one edits simply produce no decision.
+2. **The shared Liability proposals are deliberately different framings** so the cherry-pick is a real choice: Legal proposes a mutual cap **with carve-outs** for confidentiality/indemnity breaches; Finance proposes a cap **tied to fees paid** in the prior period. Canned redlines reflect this; the real-Claude prompts steer each toward its lens.
+3. **Merge-readiness:** `mergeReview` is enabled only when **every** decision is `decided` (accepted or kept-original) — nothing is silently dropped. The UI shows "N of M decided" and gates the Merge button until M of M.
+4. **Decision ordering = document order.** `buildDecisions` returns decisions sorted by the clause's position in `base.clauses`; each `insert` is ordered immediately after its `afterClauseId` anchor. The left document and the right panel walk top-to-bottom in sync.
+5. **Left-document clause statuses:** `unchanged` (no proposal — most clauses, plain), `contested` (2 proposals), `{Department} proposes` (1 proposal), `accepted from {Department}`, `kept original`.
+6. **Re-decide / audit semantics:** decisions are freely re-decidable; each `acceptEdit`/`skipDecision` **appends** an immutable audit event (the full deliberation history), while the derived contract always reflects the *latest* accepted edit per decision. Changing Liability from Legal→Finance leaves both events in the trail; the contract carries Finance's.
+7. **Merge animation — multi-branch mode (replaces single-winner).** `BranchVisualization` currently treats "no single winner" as `isDismiss` and renders *"Discarding all branches…"*. For cherry-pick there is no single winner, so a new **merge-all mode** is added: on merge, every contributing department branch converges into the new `main v2` with the merge caption "merging to v2" — never the dismiss path. App's `handleMerge` drops the single-winner snapshot; the viz lifecycle is rebuilt around the single `"merging"` status (no `picking`/`gating`): `fork`→`analyze` while agents run, `done`/`merging` once decisions are ready, `merge`→`complete` on merge.
+
+## Frontend removals
+
+`RedlineComparison` (pick-one) and the single-queue `ApprovalGate` are removed and replaced by `CherryPickReview`. (Backend removals — `pickStrategy`, `approveNext`, `rejectNext`, pending/rejected — as noted above.)
+
 ## Out of scope (v1)
 
 - Per-department avatars/voice beyond label + color.
@@ -87,5 +101,6 @@ Department identity (label + color) lives in one shared map reused by `CherryPic
 
 ## Testing
 
-- **Unit (`contract-engine`):** `buildDecisions` — groups modify edits by clause; a shared clause yields 2 proposals; inserts become their own decisions; undecided by default. Derived-`applied` selection picks the accepted department's edit.
-- **Integration (local-fs):** start → `decisions.json` has the expected per-clause proposals (2 on liability) → accept Finance on liability + Legal on indemnity + skip one → merge yields a contract containing exactly those edits → `getActiveReview` rehydrates decisions mid-flow → re-deciding a clause updates the derived contract.
+- **Unit (`contract-engine`):** `buildDecisions` — groups modify edits by clause; the shared Liability clause yields exactly 2 proposals while every other clause yields at most 1; inserts become their own decisions; decisions are in document order; undecided by default. Derived-`applied` selection picks the accepted department's edit.
+- **Unit (ownership enforcement):** an agent edit targeting a clause outside its owned set is dropped; an in-lane edit is kept; Security's insert is kept.
+- **Integration (local-fs):** start → `decisions.json` has the expected per-clause proposals (2 on Liability) → accept Finance on Liability + Legal on Indemnity + skip one → `mergeReview` is blocked until all decided, then yields a contract containing exactly those edits → `getActiveReview` rehydrates decisions mid-flow → re-deciding a clause updates the derived contract and appends an audit event.
