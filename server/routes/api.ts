@@ -1,18 +1,34 @@
 import { Router } from "express";
+import multer from "multer";
 import { getMesa, reinitializeMesa, type BackendChoice } from "../services/mesa.js";
 import { hasKey, setKey, deleteKey, getKey } from "../services/config.js";
-import { reinitializeAnthropic, clearAnthropic } from "../services/claude.js";
+import { reinitializeAnthropic, clearAnthropic, hasAnthropicKey, segmentContract } from "../services/claude.js";
 import { emitActivity } from "./events.js";
 import {
   getContract, startReview, acceptEdit, skipDecision,
   mergeReview, getActiveReview, getAuditTrail, clearActiveReview,
   setContract,
 } from "../services/review.js";
-import { SAMPLES, getSample } from "../services/intake.js";
+import { SAMPLES, getSample, extractText } from "../services/intake.js";
 import { PERSONAS } from "../data/personas.js";
 import type { StorageBackend, Department } from "../../shared/types.js";
 
 export const apiRouter = Router();
+
+const upload = multer({ limits: { fileSize: 2 * 1024 * 1024 } });
+
+apiRouter.post("/contract/upload", upload.single("file"), async (req, res) => {
+  try {
+    if (!hasAnthropicKey()) { res.status(400).json({ error: "An Anthropic key is required to read an uploaded contract — add one in Settings, or use a sample." }); return; }
+    const file = (req as any).file as { buffer: Buffer; originalname: string } | undefined;
+    if (!file) { res.status(400).json({ error: "No file uploaded" }); return; }
+    const text = await extractText(file.buffer, file.originalname);
+    if (text.replace(/\s/g, "").length < 200) { res.status(400).json({ error: "Couldn't extract text — this may be a scanned/image PDF. Paste the text or use a sample." }); return; }
+    const contract = await segmentContract(text);
+    await (await import("../services/review.js")).setContract(contract);
+    res.json({ contract });
+  } catch (error) { console.error("Upload failed:", error); res.status(400).json({ error: error instanceof Error ? error.message : "Failed to read contract" }); }
+});
 
 apiRouter.get("/diff", async (req, res) => {
   try {

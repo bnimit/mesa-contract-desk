@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { Contract, RedlineEdit } from "../../shared/types.js";
+import type { Contract, Clause, RedlineEdit } from "../../shared/types.js";
 
 let client: Anthropic | null = null;
 
@@ -20,6 +20,39 @@ export function getClient(): Anthropic {
     throw new Error("Anthropic API key not configured — add it in Settings");
   }
   return client;
+}
+
+export function parseSegmentedContract(text: string): Contract {
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error("Segmentation returned no JSON");
+  const parsed = JSON.parse(match[0]);
+  const clauses: Clause[] = (parsed.clauses ?? []).map((c: any, i: number) => ({
+    id: typeof c.id === "string" && c.id.trim() ? c.id.trim() : `clause-${i + 1}`,
+    heading: c.heading ?? `Clause ${i + 1}`,
+    text: c.text ?? "",
+  }));
+  if (clauses.length < 2) throw new Error("Could not segment into clauses");
+  // dedupe ids
+  const seen = new Set<string>();
+  for (const c of clauses) { let id = c.id, n = 1; while (seen.has(id)) id = `${c.id}-${++n}`; c.id = id; seen.add(id); }
+  return {
+    meta: { title: parsed.title ?? "Uploaded Contract", parties: Array.isArray(parsed.parties) ? parsed.parties : [], version: 1, lastApproved: null },
+    clauses,
+  };
+}
+
+export async function segmentContract(rawText: string): Promise<Contract> {
+  const response = await getClient().messages.create({
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 4096,
+    messages: [{ role: "user", content: `Split this contract into its numbered clauses. Respond with ONLY JSON:
+{"title": "...", "parties": ["...","..."], "clauses": [{"id":"short-slug","heading":"1. Heading","text":"full clause text"}]}
+Use a short lowercase slug for each id. Keep clause text verbatim. Contract:
+
+${rawText.slice(0, 24000)}` }],
+  });
+  const text = response.content[0].type === "text" ? response.content[0].text : "";
+  return parseSegmentedContract(text);
 }
 
 const REDLINE_SCHEMA_HINT = `Respond with ONLY a valid JSON array. Each element is one redline edit:
