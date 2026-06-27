@@ -8,6 +8,7 @@ import { AuditTrail } from "./components/AuditTrail.js";
 import { ActivityFeed } from "./components/ActivityFeed.js";
 import { BranchVisualization, type VizPhase } from "./components/BranchVisualization.js";
 import { SettingsPanel } from "./components/SettingsPanel.js";
+import { HowItWorks } from "./components/HowItWorks.js";
 
 export default function App() {
   const { backends, loading: settingsLoading, mesaInfo, keys, saveKeys, clearKeys, resetDemo, switchBackend } = useSettings();
@@ -35,26 +36,24 @@ export default function App() {
 
   return (
     <div className="min-h-screen text-ink">
-      <header className="border-b border-line">
-        <div className="max-w-7xl mx-auto px-8 py-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-7 h-7 bg-ink flex items-center justify-center text-canvas font-display italic text-base leading-none">
-              <span style={{ transform: "translateY(-1px)" }}>m</span>
-            </div>
-            <span className="font-mono text-xs tracking-[0.2em] uppercase">Mesa</span>
-            <span className="text-mute-2 mx-2">·</span>
+      <header className="border-b border-line bg-canvas/80 backdrop-blur sticky top-0 z-30">
+        <div className="max-w-6xl mx-auto px-8 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-6 rounded-md bg-mesa flex items-center justify-center text-white font-display italic text-sm leading-none">m</div>
+            <span className="font-mono text-xs tracking-[0.14em] uppercase">Mesa</span>
+            <span className="text-mute-2">·</span>
             <span className="font-display italic text-base text-ink-2">Contract Desk</span>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
             {activeBackend && (
               <div className="hidden md:flex items-center gap-2 font-mono text-xs text-mute">
                 <span className="w-1.5 h-1.5 rounded-full bg-up inline-block" />
                 <span>backend: {activeBackend.name}</span>
               </div>
             )}
-            <span className="font-mono text-xs text-mute hidden sm:inline">v0.3 · alpha</span>
+            <span className="font-mono text-xs text-mute hidden sm:inline">v0.3</span>
             {(keys.mesa || keys.anthropic) && (
-              <button onClick={() => setShowClearConfirm(true)} className="font-mono text-[10px] uppercase tracking-widest text-mute hover:text-down border border-line hover:border-down/40 px-3 py-1 transition-colors">
+              <button onClick={() => setShowClearConfirm(true)} className="font-mono text-[10px] uppercase tracking-widest text-mute hover:text-down border border-line rounded-md hover:border-down/40 px-3 py-1.5 transition-colors">
                 Clear all keys
               </button>
             )}
@@ -65,7 +64,7 @@ export default function App() {
               {!keys.anthropic && !settingsOpen && !hasOpenedSettings && (
                 <div className="absolute right-0 top-full mt-2 settings-callout">
                   <span className="absolute -top-1 right-3 w-2 h-2 bg-ink rotate-45" />
-                  <div className="bg-ink text-canvas px-4 py-2.5 font-mono text-[11px] tracking-wide whitespace-nowrap">Add API keys to use the demo</div>
+                  <div className="bg-ink text-white px-4 py-2.5 rounded-lg font-mono text-[11px] tracking-wide whitespace-nowrap">Add API keys to use the demo</div>
                 </div>
               )}
               {!keys.anthropic && !hasOpenedSettings && (
@@ -76,87 +75,72 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-8 py-16">
-        <section className="mb-20 reveal">
-          <div className="grid grid-cols-12 gap-8 items-end">
-            <div className="col-span-12 md:col-span-8">
-              <div className="section-label mb-4">A demonstration · human-in-the-loop contract review</div>
-              <h1 className="display-heading text-6xl md:text-7xl leading-[0.95] tracking-tight">
-                Three agents redline,<br />one human approves,<br /><span className="italic text-mesa">every change on the record.</span>
-              </h1>
-            </div>
-            <div className="col-span-12 md:col-span-4">
-              <p className="serif-quote text-lg leading-relaxed text-ink-2 mb-6">
-                Three attorneys fork the contract on Mesa, each proposing a different redline posture. You approve clause-by-clause through a gate that pauses and resumes from exact state — and every decision is preserved immutably.
-              </p>
-              <button onClick={start} disabled={busy || !!review} className="group inline-flex items-center gap-3 px-6 py-3 bg-ink text-canvas hover:bg-mesa transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                <span className="font-mono text-xs tracking-widest uppercase">{busy ? "Working" : review ? "Review in progress" : "Run review"}</span>
-                <span className="font-mono text-base group-hover:translate-x-1 transition-transform">→</span>
-              </button>
-              {!keys.anthropic && (
-                <button onClick={() => { setSettingsOpen(true); setHasOpenedSettings(true); }} className="section-label text-mesa hover:underline cursor-pointer mt-3 block text-left">
-                  Runs with canned redlines — add an Anthropic key for live agents →
-                </button>
-              )}
-            </div>
+      <main className="max-w-6xl mx-auto px-8 py-14">
+        {/* Hero */}
+        <section className="rounded-2xl bg-gradient-to-b from-canvas to-canvas-2 border border-line px-9 py-12 mb-8 reveal">
+          <div className="pill pill-ok mb-4">Counsel-in-the-loop · versioned filesystem</div>
+          <h1 className="display-heading text-5xl md:text-6xl leading-[1.04] max-w-2xl">
+            Three agents redline.<br /><span className="text-mesa">You approve every change.</span>
+          </h1>
+          <div className="flex flex-wrap items-center gap-4 mt-7">
+            <button onClick={start} disabled={busy || !!review} className="group inline-flex items-center gap-2.5 px-6 py-3 rounded-xl bg-mesa text-white font-semibold text-sm hover:bg-[color:var(--color-up)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              {busy ? "Working" : review ? "Review in progress" : "Run review"}
+              <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+            </button>
+            {!keys.anthropic && (
+              <span className="text-sm text-mute">Runs with sample redlines — add an Anthropic key in Settings for live agents.</span>
+            )}
           </div>
         </section>
 
-        <div className="hairline mb-20" />
+        {/* How it works */}
+        <section className="mb-8"><HowItWorks /></section>
 
-        {/* 01 Contract */}
-        <div className="grid grid-cols-12 gap-8 mb-20">
-          <aside className="col-span-12 md:col-span-2"><div className="section-number">01</div><div className="section-label mt-4">Contract</div></aside>
-          <div className="col-span-12 md:col-span-10">{contract && <ContractView contract={contract} />}</div>
-        </div>
+        {/* Contract */}
+        <section className="mb-8">
+          <div className="section-label mb-3">The contract</div>
+          {contract && <ContractView contract={contract} />}
+        </section>
 
-        {/* 02 Review (swarm + pick) */}
+        {/* Review (swarm + pick) */}
         {review && review.status === "picking" && (
-          <>
-            <div className="hairline mb-20" />
-            <div className="grid grid-cols-12 gap-8 mb-20">
-              <aside className="col-span-12 md:col-span-2"><div className="section-number">02</div><div className="section-label mt-4">Review</div></aside>
-              <div className="col-span-12 md:col-span-10">
-                {vizPhase && <BranchVisualization key={vizGeneration} phase={vizPhase} events={mesaEvents} />}
-                <div className="mt-8"><RedlineComparison strategies={strategies} onPick={pick} busy={busy} /></div>
+          <section className="mb-8">
+            <div className="section-label mb-3">Review</div>
+            {vizPhase && (
+              <div className="panel-dark p-5 mb-6">
+                <BranchVisualization key={vizGeneration} phase={vizPhase} events={mesaEvents} />
               </div>
-            </div>
-          </>
+            )}
+            <RedlineComparison strategies={strategies} onPick={pick} busy={busy} />
+          </section>
         )}
 
-        {/* 03 Approval gate */}
+        {/* Approval gate */}
         {review && review.status === "gating" && (
-          <>
-            <div className="hairline mb-20" />
-            <div className="grid grid-cols-12 gap-8 mb-20">
-              <aside className="col-span-12 md:col-span-2"><div className="section-number">03</div><div className="section-label mt-4">Approve</div></aside>
-              <div className="col-span-12 md:col-span-10">
-                <ApprovalGate review={review} onApprove={approve} onReject={reject} onRollback={rollback} onMerge={merge} busy={busy} />
-              </div>
-            </div>
-          </>
+          <section className="mb-8">
+            <div className="section-label mb-3">Approval gate</div>
+            <ApprovalGate review={review} onApprove={approve} onReject={reject} onRollback={rollback} onMerge={merge} busy={busy} />
+          </section>
         )}
 
-        {/* 04 Audit trail */}
-        <div className="hairline mb-20" />
-        <div className="grid grid-cols-12 gap-8 mb-20">
-          <aside className="col-span-12 md:col-span-2"><div className="section-number">04</div><div className="section-label mt-4">Audit</div></aside>
-          <div className="col-span-12 md:col-span-10"><AuditTrail events={auditEvents} /></div>
-        </div>
+        {/* Audit trail */}
+        <section className="mb-8">
+          <div className="section-label mb-3">Audit trail</div>
+          <AuditTrail events={auditEvents} />
+        </section>
 
-        {/* 05 Activity */}
-        <div className="hairline mb-20" />
-        <div className="grid grid-cols-12 gap-8 mb-20">
-          <aside className="col-span-12 md:col-span-2"><div className="section-number">05</div><div className="section-label mt-4">Activity</div></aside>
-          <div className="col-span-12 md:col-span-10"><ActivityFeed events={mesaEvents} connected={sseConnected} /></div>
-        </div>
+        {/* Activity */}
+        <section className="mb-8">
+          <div className="section-label mb-3">Activity</div>
+          <ActivityFeed events={mesaEvents} connected={sseConnected} />
+        </section>
       </main>
 
       <footer className="border-t border-line mt-32">
-        <div className="max-w-7xl mx-auto px-8 py-12">
+        <div className="max-w-6xl mx-auto px-8 py-12">
           <div className="grid grid-cols-12 gap-8">
             <div className="col-span-12 md:col-span-6">
-              <div className="font-display italic text-2xl mb-2">A Mesa demonstration.</div>
+              <div className="font-display italic text-2xl mb-2 text-ink">A Mesa demonstration.</div>
               <p className="text-sm text-mute max-w-md">Human-in-the-loop contract redlining on a versioned filesystem. Branch, approve, audit, roll back — agents reasoned by Claude.</p>
             </div>
             <div className="col-span-12 md:col-span-6">
