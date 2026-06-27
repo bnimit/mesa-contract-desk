@@ -9,8 +9,11 @@ describe("intake", () => {
   it("rejects an unsupported extension", async () => {
     await expect(extractText(Buffer.from("x"), "a.png")).rejects.toThrow(/Unsupported/);
   });
-  it("lists samples including the MSA and NDA", () => {
-    expect(SAMPLES.map((s) => s.id).sort()).toEqual(["msa", "nda"]);
-    expect(getSample("msa").contract.meta.title).toContain("Master Services Agreement");
+  it("lists the IT services + AI infra samples, both with canned redlines", () => {
+    expect(SAMPLES.map((s) => s.id).sort()).toEqual(["ai-infra", "it-services"]);
+    expect(getSample("it-services").contract.meta.title).toContain("IT Services Agreement");
+    expect(getSample("ai-infra").contract.meta.title).toContain("AI Infrastructure");
+    expect(getSample("it-services").canned).not.toBeNull();
+    expect(getSample("ai-infra").canned).not.toBeNull();
   });
 });

@@ -5,7 +5,7 @@ export const PERSONAS: Persona[] = [
     domain: "liability, indemnification, governing law, warranties, and termination",
     pitch: "Cap our liability and make indemnity mutual." },
   { id: "finance", label: "Finance", color: "#b45309", cannedAvailable: true, icon: "💰",
-    domain: "fees, payment terms, term & renewal, late fees, and spend caps",
+    domain: "fees, payment terms, term & renewal, late fees, spend caps, and liability caps (the financial exposure)",
     pitch: "Extend payment terms and kill auto-renewal." },
   { id: "security", label: "Security & Data", color: "#4f46e5", cannedAvailable: true, icon: "🛡️",
     domain: "data ownership, security obligations, breach notification, and confidentiality",

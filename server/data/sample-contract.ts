@@ -2,18 +2,18 @@ import type { Contract, RedlineEdit, Department } from "../../shared/types.js";
 
 export const SAMPLE_CONTRACT: Contract = {
   meta: {
-    title: "Master Services Agreement",
-    parties: ["Northwind Software, Inc. (\"Provider\")", "Acme Corp. (\"Customer\")"],
+    title: "IT Services Agreement",
+    parties: ["Brightline IT Services, Inc. (\"Provider\")", "Acme Corp. (\"Customer\")"],
     version: 1,
     lastApproved: null,
   },
   clauses: [
-    { id: "services", heading: "1. Services", text: "Provider will make its cloud software platform available to Customer as a subscription service during the Term." },
+    { id: "services", heading: "1. Services", text: "Provider will deliver managed IT services — helpdesk, infrastructure management, monitoring, and on-call support — to Customer during the Term." },
     { id: "fees", heading: "2. Fees & Payment", text: "Customer will pay all fees within thirty (30) days of the invoice date. Late amounts accrue interest at 1.5% per month." },
     { id: "term", heading: "3. Term & Renewal", text: "This Agreement begins on the Effective Date and continues for twelve (12) months. It automatically renews for successive twelve (12) month terms unless either party gives notice of non-renewal at least ninety (90) days before the end of the then-current term." },
     { id: "liability", heading: "4. Limitation of Liability", text: "Neither party's aggregate liability under this Agreement is limited. Each party is fully responsible for all damages of any kind arising from its performance." },
     { id: "indemnity", heading: "5. Indemnification", text: "Customer will indemnify and defend Provider against any and all claims arising from Customer's use of the services, including claims of intellectual property infringement." },
-    { id: "data", heading: "6. Data & IP Ownership", text: "All data submitted to the platform, and any derivatives or analytics generated from it, are owned by Provider and may be used for any purpose." },
+    { id: "data", heading: "6. Data & IP Ownership", text: "All data and system configurations Customer provides, and any reports or analytics generated from them, are owned by Provider and may be used for any purpose." },
     { id: "confidentiality", heading: "7. Confidentiality", text: "Each party will protect the other's Confidential Information for a period of two (2) years following disclosure." },
     { id: "law", heading: "8. Governing Law", text: "This Agreement is governed by the laws of the State of New York, without regard to its conflict-of-laws principles." },
   ],

@@ -2,13 +2,13 @@ import { describe, it, expect } from "vitest";
 import { runRedlineAgent } from "./redline.js";
 import { SAMPLE_CONTRACT, CANNED_REDLINES } from "../data/sample-contract.js";
 
-describe("runRedlineAgent (no key → canned for core, empty for non-core)", () => {
-  it("returns canned redlines for each core department", async () => {
+describe("runRedlineAgent (no key → passed canned, empty when none)", () => {
+  it("returns the passed canned redlines for each core department", async () => {
     for (const d of ["legal", "finance", "security"] as const) {
-      expect(await runRedlineAgent(SAMPLE_CONTRACT, d)).toEqual(CANNED_REDLINES[d]);
+      expect(await runRedlineAgent(SAMPLE_CONTRACT, d, CANNED_REDLINES[d])).toEqual(CANNED_REDLINES[d]);
     }
   });
-  it("returns [] for a non-core department with no key", async () => {
+  it("returns [] when no canned is provided (e.g. a non-core department)", async () => {
     expect(await runRedlineAgent(SAMPLE_CONTRACT, "commercial")).toEqual([]);
   });
   it("legal and finance both propose a (different) liability edit", () => {

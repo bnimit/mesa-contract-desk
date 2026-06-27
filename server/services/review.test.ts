@@ -16,7 +16,7 @@ describe("review start & active (local-fs)", () => {
   it("seeds the contract on main", async () => {
     const c = await getContract();
     expect(c.clauses.length).toBeGreaterThanOrEqual(7);
-    expect(c.meta.title).toContain("Master Services Agreement");
+    expect(c.meta.title).toContain("IT Services Agreement");
   });
 
   it("setContract persists a modified contract", async () => {

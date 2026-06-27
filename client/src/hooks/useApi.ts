@@ -17,7 +17,7 @@ export function usePersonas() {
 }
 
 export function useSamples() {
-  const [samples, setSamples] = useState<{ id: string; title: string }[]>([]);
+  const [samples, setSamples] = useState<{ id: string; title: string; cannedAvailable: boolean }[]>([]);
   useEffect(() => { fetch("/api/samples").then((r) => r.json()).then((d) => setSamples(d.samples ?? [])).catch(() => {}); }, []);
   return { samples };
 }

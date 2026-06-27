@@ -65,12 +65,12 @@ apiRouter.get("/contract", async (_req, res) => {
 
 apiRouter.get("/personas", (_req, res) => res.json({ personas: PERSONAS }));
 
-apiRouter.get("/samples", (_req, res) => res.json({ samples: SAMPLES.map((s) => ({ id: s.id, title: s.title })) }));
+apiRouter.get("/samples", (_req, res) => res.json({ samples: SAMPLES.map((s) => ({ id: s.id, title: s.title, cannedAvailable: !!s.canned })) }));
 apiRouter.post("/contract/sample", async (req, res) => {
   try {
     const { id } = req.body as { id: string };
     const sample = getSample(id);
-    await setContract(sample.contract);
+    await setContract(sample.contract, sample.canned);
     res.json({ contract: sample.contract });
   } catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : "Failed to load sample" }); }
 });
@@ -290,9 +290,9 @@ apiRouter.delete("/settings/keys", async (_req, res) => {
 
 apiRouter.post("/reset", async (_req, res) => {
   try {
-    const { SAMPLE_CONTRACT } = await import("../data/sample-contract.js");
+    const { SAMPLE_CONTRACT, CANNED_REDLINES } = await import("../data/sample-contract.js");
     await clearActiveReview();
-    await getMesa().writeFile("main", "contract.json", JSON.stringify(SAMPLE_CONTRACT, null, 2));
+    await setContract(SAMPLE_CONTRACT, CANNED_REDLINES);
     await getMesa().writeFile("main", "audit-log.json", JSON.stringify([]));
     emitActivity("file_written", "Demo reset — contract restored to v1, audit cleared");
     res.json({ ok: true });

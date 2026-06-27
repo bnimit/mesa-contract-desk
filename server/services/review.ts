@@ -1,6 +1,6 @@
 import { getMesa } from "./mesa.js";
 import { applyEdits, buildDecisions, decisionsToApplied } from "./contract-engine.js";
-import { SAMPLE_CONTRACT } from "../data/sample-contract.js";
+import { SAMPLE_CONTRACT, CANNED_REDLINES } from "../data/sample-contract.js";
 import { runRedlineAgent } from "../agents/redline.js";
 import { getPersona } from "../data/personas.js";
 import { emitActivity } from "../routes/events.js";
@@ -12,6 +12,9 @@ const ACTIVE_FILE = "active-review.json";
 const AUDIT_LOG_FILE = "audit-log.json";
 const DECISIONS_FILE = "decisions.json";
 const AUDIT_WORK_FILE = "audit.json";
+const CANNED_FILE = "canned.json"; // canned redlines for the current contract (offline path), or null
+
+type CannedSet = Record<"legal" | "finance" | "security", RedlineEdit[]>;
 
 export const reviewBranch = (id: number) => `review/${id}`;
 export const departmentBranch = (id: number, d: Department) => `review/${id}/${d}`;
@@ -27,13 +30,18 @@ async function writeJson(branch: string, path: string, value: unknown): Promise<
 
 export async function seedContract(): Promise<void> {
   try { await getMesa().readFile(MAIN, CONTRACT_FILE); }
-  catch { await writeJson(MAIN, CONTRACT_FILE, SAMPLE_CONTRACT); }
+  catch {
+    await writeJson(MAIN, CONTRACT_FILE, SAMPLE_CONTRACT);
+    await writeJson(MAIN, CANNED_FILE, CANNED_REDLINES);
+  }
 }
 export async function getContract(): Promise<Contract> {
   return readJson<Contract>(MAIN, CONTRACT_FILE, SAMPLE_CONTRACT);
 }
-export async function setContract(c: Contract): Promise<void> {
+/** Set the current contract on main, and the canned redlines for the offline path (null for uploads). */
+export async function setContract(c: Contract, canned: CannedSet | null = null): Promise<void> {
   await writeJson(MAIN, CONTRACT_FILE, c);
+  await writeJson(MAIN, CANNED_FILE, canned);
 }
 export function newAuditEvent(e: Omit<AuditEvent, "id" | "timestamp">): AuditEvent {
   return { ...e, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, timestamp: Date.now() };
@@ -42,8 +50,9 @@ export function newAuditEvent(e: Omit<AuditEvent, "id" | "timestamp">): AuditEve
 export async function clearActiveReview(): Promise<void> {
   const ptr = await readJson<ActivePointer | null>(MAIN, ACTIVE_FILE, null);
   if (ptr) {
-    for (const d of ptr.departments) await getMesa().deleteBranch(departmentBranch(ptr.id, d));
-    await getMesa().deleteBranch(reviewBranch(ptr.id));
+    // `departments` may be absent on a stale/old-format pointer — guard against it.
+    for (const d of ptr.departments ?? []) await getMesa().deleteBranch(departmentBranch(ptr.id, d));
+    if (typeof ptr.id === "number") await getMesa().deleteBranch(reviewBranch(ptr.id));
   }
   await writeJson(MAIN, ACTIVE_FILE, null);
 }
@@ -52,6 +61,7 @@ export async function clearActiveReview(): Promise<void> {
 export async function startReview(id: number, departments: Department[]): Promise<ReviewState> {
   await clearActiveReview();
   const base = await getContract();
+  const canned = await readJson<CannedSet | null>(MAIN, CANNED_FILE, null);
 
   const contributions: { department: Department; edits: RedlineEdit[] }[] = [];
   for (const d of departments) {
@@ -60,7 +70,8 @@ export async function startReview(id: number, departments: Department[]): Promis
     await getMesa().createBranch(branch, MAIN);
     emitActivity("branch_created", `Forked ${branch} for ${persona.label}`, { branch });
     emitActivity("analysis_started", `${persona.label} reviewing contract`, { agent: persona.label, branch });
-    const edits = await runRedlineAgent(base, d);
+    const cannedForDept = canned && (d === "legal" || d === "finance" || d === "security") ? canned[d] : undefined;
+    const edits = await runRedlineAgent(base, d, cannedForDept);
     await writeJson(branch, "redlines.json", edits);
     emitActivity("agent_complete", `${persona.label}: ${edits.length} edit(s)`, { agent: persona.label, branch });
     contributions.push({ department: d, edits });

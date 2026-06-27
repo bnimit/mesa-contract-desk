@@ -4,7 +4,7 @@ import type { Persona, Department } from "../types.js";
 interface Props {
   personas: Persona[];
   contractTitle: string | null;
-  samples: { id: string; title: string }[];
+  samples: { id: string; title: string; cannedAvailable: boolean }[];
   onUpload: (file: File) => void;
   onLoadSample: (id: string) => void;
   selected: Department[];
@@ -16,9 +16,9 @@ interface Props {
 
 export function IntakePanel({ personas, contractTitle, samples, onUpload, onLoadSample, selected, onToggle, hasKey, onRun, busy }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const isDefaultMsa = contractTitle?.includes("Master Services Agreement");
+  const loadedSample = samples.find((s) => s.title === contractTitle);
   const allCore = selected.every((d) => ["legal", "finance", "security"].includes(d));
-  const offlineOk = isDefaultMsa && allCore;
+  const offlineOk = !!loadedSample?.cannedAvailable && allCore;
   const needsKey = !offlineOk;
   const canRun = !!contractTitle && selected.length >= 2 && selected.length <= 4 && (hasKey || offlineOk);
 
@@ -45,7 +45,6 @@ export function IntakePanel({ personas, contractTitle, samples, onUpload, onLoad
           <div className="flex flex-col gap-2">
             <div className="text-[11px] text-mute">…or start with a sample</div>
             {samples.map((s) => {
-              const isMsa = s.title.includes("Master Services Agreement");
               const active = contractTitle === s.title;
               return (
                 <button
@@ -55,7 +54,7 @@ export function IntakePanel({ personas, contractTitle, samples, onUpload, onLoad
                 >
                   <span className="text-lg shrink-0">📄</span>
                   <span className="text-xs font-semibold flex-1">{s.title}</span>
-                  {isMsa && <span className="pill pill-ok shrink-0">runs offline</span>}
+                  {s.cannedAvailable && <span className="pill pill-ok shrink-0">runs offline</span>}
                 </button>
               );
             })}

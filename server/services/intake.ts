@@ -1,7 +1,15 @@
 import mammoth from "mammoth";
-import { SAMPLE_CONTRACT } from "../data/sample-contract.js";
-import { SAMPLE_NDA } from "../data/sample-nda.js";
-import type { Contract } from "../../shared/types.js";
+import { SAMPLE_CONTRACT, CANNED_REDLINES } from "../data/sample-contract.js";
+import { AI_INFRA, AI_INFRA_CANNED } from "../data/sample-ai-infra.js";
+import type { Contract, RedlineEdit } from "../../shared/types.js";
+
+export type CannedSet = Record<"legal" | "finance" | "security", RedlineEdit[]>;
+export interface Sample {
+  id: string;
+  title: string;
+  contract: Contract;
+  canned: CannedSet | null; // canned redlines for the offline (no-key) path
+}
 
 export async function extractText(buffer: Buffer, filename: string): Promise<string> {
   const lower = filename.toLowerCase();
@@ -19,11 +27,11 @@ export async function extractText(buffer: Buffer, filename: string): Promise<str
   throw new Error("Unsupported file type — use .pdf, .docx, or .txt");
 }
 
-export const SAMPLES: { id: string; title: string; contract: Contract }[] = [
-  { id: "msa", title: SAMPLE_CONTRACT.meta.title, contract: SAMPLE_CONTRACT },
-  { id: "nda", title: SAMPLE_NDA.meta.title, contract: SAMPLE_NDA },
+export const SAMPLES: Sample[] = [
+  { id: "it-services", title: SAMPLE_CONTRACT.meta.title, contract: SAMPLE_CONTRACT, canned: CANNED_REDLINES },
+  { id: "ai-infra", title: AI_INFRA.meta.title, contract: AI_INFRA, canned: AI_INFRA_CANNED },
 ];
-export function getSample(id: string): { id: string; title: string; contract: Contract } {
+export function getSample(id: string): Sample {
   const s = SAMPLES.find((s) => s.id === id);
   if (!s) throw new Error(`Unknown sample ${id}`);
   return s;
