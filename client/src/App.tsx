@@ -1,37 +1,38 @@
 import { useState, useCallback, useEffect } from "react";
-import { useSettings, useWebhookTargets, useRepoTags, useContract, useReview, useAuditTrail } from "./hooks/useApi.js";
+import { useSettings, useWebhookTargets, useRepoTags, useContract, useReview, useAuditTrail, usePersonas, useSamples } from "./hooks/useApi.js";
 import { useMesaEvents } from "./hooks/useMesaEvents.js";
-import { ContractView } from "./components/ContractView.js";
-import { RedlineComparison } from "./components/RedlineComparison.js";
-import { ApprovalGate } from "./components/ApprovalGate.js";
+import { IntakePanel } from "./components/IntakePanel.js";
+import { CherryPickReview } from "./components/CherryPickReview.js";
 import { AuditTrail } from "./components/AuditTrail.js";
 import { ActivityFeed } from "./components/ActivityFeed.js";
 import { BranchVisualization, type VizPhase } from "./components/BranchVisualization.js";
 import { SettingsPanel } from "./components/SettingsPanel.js";
 import { HowItWorks } from "./components/HowItWorks.js";
+import type { Department } from "./types.js";
 
 export default function App() {
   const { backends, loading: settingsLoading, mesaInfo, keys, saveKeys, clearKeys, resetDemo, switchBackend } = useSettings();
   const [refreshKey, setRefreshKey] = useState(0);
   const bump = useCallback(() => setRefreshKey((k) => k + 1), []);
 
-  const { contract, refresh: refreshContract } = useContract(refreshKey);
+  const { personas } = usePersonas();
+  const { samples } = useSamples();
+  const { contract, refresh: refreshContract, loadSample, uploadFile } = useContract(refreshKey);
   const onReviewChange = useCallback(() => { refreshContract(); bump(); }, [refreshContract, bump]);
-  const { review, strategies, busy, start, pick, approve, reject, rollback, merge } = useReview(onReviewChange);
+  const { review, busy, start, accept, skip, merge } = useReview(onReviewChange);
   const { events: auditEvents } = useAuditTrail(refreshKey);
   const { targets: webhookTargets, create: createWebhookTarget, remove: deleteWebhookTarget } = useWebhookTargets();
   const { tags: repoTags, update: updateRepoTags } = useRepoTags();
   const { events: mesaEvents, connected: sseConnected } = useMesaEvents();
 
+  const [selected, setSelected] = useState<Department[]>(["legal", "finance", "security"]);
+  const toggle = (id: Department) => setSelected((s) => s.includes(id) ? s.filter((x) => x !== id) : s.length < 4 ? [...s, id] : s);
+
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [hasOpenedSettings, setHasOpenedSettings] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [vizGeneration, setVizGeneration] = useState(0);
   const [vizPhase, setVizPhase] = useState<VizPhase | null>(null);
   const [mergeViz, setMergeViz] = useState(false);
-  const [mergeWinner, setMergeWinner] = useState<string | undefined>(undefined);
-
-  const cap = (p?: string | null) => (p ? p.charAt(0).toUpperCase() + p.slice(1) : undefined);
 
   // Drive the pipeline animation from real workflow state.
   useEffect(() => {
@@ -42,31 +43,22 @@ export default function App() {
       return;
     }
     if (!review) { setVizPhase(null); return; }
-    if (review.status === "picking") {
-      const started = mesaEvents.some((e) => e.type === "analysis_started");
-      setVizPhase(started ? "analyze" : "fork");
-    } else if (review.status === "gating") {
-      setVizPhase("done");
-    }
+    // review exists and status === "merging" → all branch analysis done
+    setVizPhase("done");
   }, [review, busy, mesaEvents, mergeViz]);
 
-  useEffect(() => {
-    if (busy && review?.status === "picking") setVizGeneration((g) => g + 1);
-  }, [busy, review]);
-
   const handleMerge = useCallback(async () => {
-    setMergeWinner(cap(review?.posture));
-    setMergeViz(true);
-    setVizPhase("merge");
+    setMergeViz(true); setVizPhase("merge");
     setTimeout(() => setVizPhase("complete"), 700);
-    try {
-      await merge();
-    } finally {
-      setTimeout(() => { setMergeViz(false); setVizPhase(null); setMergeWinner(undefined); }, 1700);
-    }
-  }, [merge, review]);
+    try { await merge(); } finally { setTimeout(() => { setMergeViz(false); setVizPhase(null); }, 1700); }
+  }, [merge]);
 
   const activeBackend = backends.find((b) => b.active);
+
+  const vizDepartments = (review?.departments ?? selected).map((id) => {
+    const p = personas.find((x) => x.id === id);
+    return { id, label: p?.label ?? id, color: p?.color ?? "#34d399" };
+  });
 
   return (
     <div className="min-h-screen text-ink">
@@ -116,48 +108,55 @@ export default function App() {
           <h1 className="display-heading text-5xl md:text-6xl leading-[1.04] max-w-2xl">
             Three agents redline.<br /><span className="text-mesa">You approve every change.</span>
           </h1>
-          <div className="flex flex-wrap items-center gap-4 mt-7">
-            <button onClick={start} disabled={busy || !!review} className="group inline-flex items-center gap-2.5 px-6 py-3 rounded-xl bg-mesa text-white font-semibold text-sm hover:bg-[color:var(--color-up)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              {busy ? "Working" : review ? "Review in progress" : "Run review"}
-              <span className="group-hover:translate-x-0.5 transition-transform">→</span>
-            </button>
-            {!keys.anthropic && (
-              <span className="text-sm text-mute">Runs with sample redlines — add an Anthropic key in{" "}<button onClick={() => { setSettingsOpen(true); setHasOpenedSettings(true); }} className="underline decoration-dotted underline-offset-2 hover:text-mesa cursor-pointer">Settings</button>{" "}for live agents.</span>
-            )}
-          </div>
         </section>
 
         {/* How it works */}
         <section className="mb-8"><HowItWorks /></section>
 
-        {/* Pipeline animation — persistent across picking, gating, and merge */}
+        {/* Intake — shown when no active review */}
+        {!review && (
+          <section className="mb-8">
+            <IntakePanel
+              personas={personas}
+              contractTitle={contract?.meta.title ?? null}
+              samples={samples}
+              onUpload={uploadFile}
+              onLoadSample={loadSample}
+              selected={selected}
+              onToggle={toggle}
+              hasKey={keys.anthropic}
+              onRun={() => start(selected)}
+              busy={busy}
+            />
+          </section>
+        )}
+
+        {/* Pipeline animation — visible during fork/analyze/done/merge/complete */}
         {vizPhase && (
           <section className="mb-8">
             <div className="panel-dark p-5">
-              <BranchVisualization key={vizGeneration} phase={vizPhase} events={mesaEvents} winnerAgent={mergeViz ? mergeWinner : (review?.status === "gating" && review.posture ? cap(review.posture) : undefined)} />
+              <BranchVisualization
+                phase={vizPhase}
+                departments={vizDepartments}
+                events={mesaEvents}
+                mergeAll={mergeViz}
+              />
             </div>
           </section>
         )}
 
-        {/* Contract */}
-        <section className="mb-8">
-          <div className="section-label mb-3">The contract</div>
-          {contract && <ContractView contract={contract} />}
-        </section>
-
-        {/* Review (swarm + pick) */}
-        {review && review.status === "picking" && (
+        {/* Cherry-pick review — shown when review is active */}
+        {review && review.status === "merging" && (
           <section className="mb-8">
             <div className="section-label mb-3">Review</div>
-            <RedlineComparison strategies={strategies} onPick={pick} busy={busy} />
-          </section>
-        )}
-
-        {/* Approval gate */}
-        {review && review.status === "gating" && (
-          <section className="mb-8">
-            <div className="section-label mb-3">Approval gate</div>
-            <ApprovalGate review={review} onApprove={approve} onReject={reject} onRollback={rollback} onMerge={handleMerge} busy={busy} />
+            <CherryPickReview
+              review={review}
+              personas={personas}
+              onAccept={accept}
+              onSkip={skip}
+              onMerge={handleMerge}
+              busy={busy}
+            />
           </section>
         )}
 
