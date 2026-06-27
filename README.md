@@ -67,7 +67,7 @@ npm install
 npm run dev
 ```
 
-Then open the URL Vite prints (default **http://localhost:5173**). `npm run dev` starts both the Express API (`:3001`) and the Vite client, which proxies `/api/*` to it.
+Then open **http://localhost:4000** (the port Vite prints). `npm run dev` starts both the Express API (`:3001`) and the Vite client on `:4000`, which proxies `/api/*` to it.
 
 On first launch you can immediately review either built-in sample with the three core reviewers (Legal, Finance, Security) — no API key required. To upload your own contract or use the Commercial / Privacy reviewers, add your **Anthropic API key** in the Settings panel (uploads are segmented into clauses by Claude). No `.env` file needed — keys are encrypted and stored locally in a SQLite database (`.mesa/config.db`).
 
