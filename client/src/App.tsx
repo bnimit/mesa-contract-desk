@@ -106,7 +106,7 @@ export default function App() {
         <section className="rounded-2xl bg-gradient-to-b from-canvas to-canvas-2 border border-line px-9 py-12 mb-8 reveal">
           <div className="pill pill-ok mb-4">Counsel-in-the-loop · versioned filesystem</div>
           <h1 className="display-heading text-5xl md:text-6xl leading-[1.04] max-w-2xl">
-            Three agents redline.<br /><span className="text-mesa">You approve every change.</span>
+            Your departments redline in parallel,<br /><span className="text-mesa">you merge the best of each.</span>
           </h1>
         </section>
 

@@ -8,8 +8,13 @@ export async function extractText(buffer: Buffer, filename: string): Promise<str
   if (lower.endsWith(".txt")) return buffer.toString("utf-8");
   if (lower.endsWith(".docx")) return (await mammoth.extractRawText({ buffer })).value;
   if (lower.endsWith(".pdf")) {
-    const pdfParse = (await import("pdf-parse")).default;
-    return (await pdfParse(buffer)).text;
+    const { PDFParse } = await import("pdf-parse");
+    const parser = new PDFParse({ data: buffer });
+    try {
+      return (await parser.getText()).text;
+    } finally {
+      await parser.destroy();
+    }
   }
   throw new Error("Unsupported file type — use .pdf, .docx, or .txt");
 }

@@ -1,8 +1,8 @@
 const STEPS = [
-  { n: "①", title: "Fork", body: "Three counsel branch the contract on Mesa — instant, isolated, no copy." },
-  { n: "②", title: "Approve", body: "You accept or reject each clause. The gate resumes from exact state." },
-  { n: "③", title: "Merge", body: "Approved edits land on main as a new version." },
-  { n: "④", title: "Audit", body: "Every decision kept immutably — author, reason, rollback." },
+  { n: "①", title: "Review", body: "2–4 department reviewers redline their own domain on isolated Mesa branches, in parallel." },
+  { n: "②", title: "Cherry-pick", body: "You pick the best edit per clause from any team, or keep the original." },
+  { n: "③", title: "Merge", body: "Accepted edits land on main as a clean new version." },
+  { n: "④", title: "Audit", body: "Every decision kept immutably — which team, which clause, and why." },
 ];
 
 export function HowItWorks() {

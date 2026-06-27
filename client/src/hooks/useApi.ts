@@ -36,8 +36,14 @@ export function useContract(refreshKey?: unknown) {
   }, []);
   const uploadFile = useCallback(async (file: File) => {
     const fd = new FormData(); fd.append("file", file);
-    const r = await fetch("/api/contract/upload", { method: "POST", body: fd });
-    const d = await r.json(); if (r.ok) setContract(d.contract); return r.ok ? { ok: true, contract: d.contract } : { ok: false, error: d.error };
+    try {
+      const r = await fetch("/api/contract/upload", { method: "POST", body: fd });
+      const d = await r.json().catch(() => ({ error: "Upload failed" }));
+      if (r.ok) { setContract(d.contract); return { ok: true, contract: d.contract }; }
+      return { ok: false, error: d.error };
+    } catch {
+      return { ok: false, error: "Upload failed" };
+    }
   }, []);
   useEffect(() => { refresh(); }, [refresh, refreshKey]);
   return { contract, loading, refresh, loadSample, uploadFile };

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import type express from "express";
 import multer from "multer";
 import { getMesa, reinitializeMesa, type BackendChoice } from "../services/mesa.js";
 import { hasKey, setKey, deleteKey, getKey } from "../services/config.js";
@@ -17,7 +18,17 @@ export const apiRouter = Router();
 
 const upload = multer({ limits: { fileSize: 2 * 1024 * 1024 } });
 
-apiRouter.post("/contract/upload", upload.single("file"), async (req, res) => {
+function handleUpload(req: express.Request, res: express.Response, next: express.NextFunction) {
+  upload.single("file")(req, res, (err: unknown) => {
+    if (err) {
+      const tooBig = err && typeof err === "object" && (err as { code?: string }).code === "LIMIT_FILE_SIZE";
+      return res.status(400).json({ error: tooBig ? "File too large (max 2 MB)" : "Upload failed" });
+    }
+    next();
+  });
+}
+
+apiRouter.post("/contract/upload", handleUpload, async (req, res) => {
   try {
     if (!hasAnthropicKey()) { res.status(400).json({ error: "An Anthropic key is required to read an uploaded contract — add one in Settings, or use a sample." }); return; }
     const file = (req as any).file as { buffer: Buffer; originalname: string } | undefined;
