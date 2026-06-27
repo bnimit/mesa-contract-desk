@@ -1,7 +1,0 @@
-{
-  "AAPL": { "price": 195.20, "change": 1.35, "changePercent": 0.70, "name": "Apple Inc." },
-  "NVDA": { "price": 950.00, "change": 12.50, "changePercent": 1.33, "name": "NVIDIA Corporation" },
-  "MSFT": { "price": 425.80, "change": -2.10, "changePercent": -0.49, "name": "Microsoft Corporation" },
-  "GOOGL": { "price": 178.50, "change": 3.20, "changePercent": 1.83, "name": "Alphabet Inc." },
-  "AMZN": { "price": 205.30, "change": 0.85, "changePercent": 0.42, "name": "Amazon.com Inc." }
-}

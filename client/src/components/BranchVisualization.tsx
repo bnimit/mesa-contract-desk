@@ -24,30 +24,30 @@ interface AgentDef {
 
 const AGENTS: AgentDef[] = [
   {
-    key: "Fundamentals",
-    label: "Fundamentals",
-    sigil: "◆",
-    color: "var(--color-fundamentals)",
+    key: "Aggressive",
+    label: "Aggressive",
+    sigil: "▲",
+    color: "var(--color-down)",
     y: 50,
     forkDelay: "0.2s",
     path: "M 68,130 C 180,130 260,50 432,50",
     mergePath: "M 448,50 C 540,50 600,130 692,130",
   },
   {
-    key: "Sentiment",
-    label: "Sentiment",
-    sigil: "●",
-    color: "var(--color-sentiment)",
+    key: "Balanced",
+    label: "Balanced",
+    sigil: "◆",
+    color: "var(--color-fundamentals)",
     y: 130,
     forkDelay: "0.4s",
     path: "M 68,130 C 180,130 260,130 432,130",
     mergePath: "M 448,130 C 540,130 600,130 692,130",
   },
   {
-    key: "Technical",
-    label: "Technical",
-    sigil: "▲",
-    color: "var(--color-technical)",
+    key: "Minimal",
+    label: "Minimal",
+    sigil: "●",
+    color: "var(--color-mute)",
     y: 210,
     forkDelay: "0.6s",
     path: "M 68,130 C 180,130 260,210 432,210",
@@ -333,12 +333,12 @@ export function BranchVisualization({
       <div className="text-center mt-4">
         {phase === "fork" && (
           <p className="section-label fade-in">
-            Forking portfolio to three branches…
+            Forking contract to three attorney branches…
           </p>
         )}
         {phase === "analyze" && (
           <p className="section-label fade-in">
-            Agents fetching market data and writing proposals
+            Attorneys reviewing contract and proposing redlines
             <span className="dot-1 ml-1">·</span>
             <span className="dot-2">·</span>
             <span className="dot-3">·</span>

@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import type {
   StorageBackend,
   WebhookTarget,
-  MesaChange,
   RepoTags,
   Contract,
   RedlineStrategy,
@@ -218,28 +217,6 @@ export function useWebhookTargets() {
   useEffect(() => { refresh(); }, [refresh]);
 
   return { targets, loading, refresh, create, remove };
-}
-
-export function useChanges(refreshKey: unknown) {
-  const [changes, setChanges] = useState<MesaChange[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/changes?limit=30");
-      const data = await res.json();
-      setChanges(data.changes ?? []);
-    } catch {
-      console.error("Failed to fetch changes");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { refresh(); }, [refresh, refreshKey]);
-
-  return { changes, loading, refresh };
 }
 
 export function useRepoTags() {

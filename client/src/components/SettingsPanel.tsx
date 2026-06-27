@@ -274,7 +274,7 @@ export function SettingsPanel({
           <div className="mt-10 pt-6 border-t border-line">
             <div className="section-label mb-3">Reset demo</div>
             <p className="serif-quote text-sm text-mute leading-relaxed mb-4">
-              Clear all history, reset the playbook, and restore the portfolio to its defaults. API keys are kept.
+              Clear all review history and restore the contract to its defaults. API keys are kept.
             </p>
             <button
               onClick={async () => {

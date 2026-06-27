@@ -1,16 +1,15 @@
-# Mesa Portfolio Advisor
+# Mesa Contract Desk
 
-A demo where three AI agents independently analyze a stock portfolio on separate [Mesa](https://mesa.dev) branches, each using a different strategy. You review their proposals side-by-side and pick the winner to merge — all on a versioned filesystem.
+A demo where three AI attorneys independently redline a contract on separate [Mesa](https://mesa.dev) branches, each using a different negotiation posture. You review their proposals, pick one, and approve or reject each clause through a human-in-the-loop gate. Every decision is preserved immutably in an audit trail.
 
-Built to showcase how Mesa enables multi-agent workflows with branching, isolation, and audit trails.
+Built to showcase how Mesa enables multi-agent workflows with branching, isolation, human approval gates, and audit trails.
 
 ## How It Works
 
 ```
                          ┌─────────────┐
                          │    main     │
-                         │ portfolio.json │
-                         │ playbook.md │
+                         │ contract.json │
                          └──────┬──────┘
                                 │
                      ┌──────────┼──────────┐
@@ -18,7 +17,7 @@ Built to showcase how Mesa enables multi-agent workflows with branching, isolati
                 fork │     fork │     fork │
                      ▼          ▼          ▼
             ┌──────────┐ ┌──────────┐ ┌──────────┐
-            │Fundamentals│ │ Sentiment │ │ Technical │
+            │Aggressive │ │ Balanced  │ │  Minimal  │
             │  branch   │ │  branch   │ │  branch   │
             └─────┬─────┘ └─────┬─────┘ └─────┬─────┘
                   │             │             │
@@ -26,53 +25,52 @@ Built to showcase how Mesa enables multi-agent workflows with branching, isolati
            Haiku  │      Haiku  │      Haiku  │
                   ▼             ▼             ▼
             ┌──────────┐ ┌──────────┐ ┌──────────┐
-            │  P/E &    │ │  News &   │ │  SMA &    │
-            │  revenue  │ │  headlines│ │  momentum │
-            │  analysis │ │  analysis │ │  analysis │
+            │ Push hard │ │  Fair &   │ │  Highest- │
+            │ flip terms│ │  mutual   │ │  impact   │
+            │ strip data│ │  caps     │ │  only     │
             └─────┬─────┘ └─────┬─────┘ └─────┬─────┘
                   │             │             │
                   └──────┬──────┘──────┬──────┘
                          │             │
-                    You review all three
-                    proposals side-by-side
+                  Pick a strategy to review
                          │
-                    Pick a winner
+                  Clause-by-clause approval gate
+                  (approve / reject / roll back)
                          │
                          ▼
                   ┌─────────────┐
-                  │    main     │  ← merged portfolio
-                  │ playbook.md │  ← all agents' entries
+                  │    main     │  ← merged contract
+                  │  audit log  │  ← every decision on record
                   └─────────────┘
 ```
 
-### The Analysis Cycle
+### The Review Cycle
 
-1. **Fork** — Each agent gets its own Mesa branch forked from `main`
-2. **Analyze** — Agents fetch live market data (Yahoo Finance) and reason with Claude Haiku
-3. **Write** — Each agent writes proposed trades to `portfolio.json` and observations to `playbook.md` on its branch
-4. **Compare** — The UI shows all three proposals side-by-side as compact trade bullets
-5. **Merge** — You pick one strategy; its portfolio merges to `main`, all agents' playbook entries merge (so every agent learns from every round)
-6. **Replay** — Browse any past round's original proposals with the chosen strategy highlighted (no LLM re-call)
+1. **Swarm** — Three attorneys fork the contract on separate Mesa branches, each proposing 2–5 clause edits from their posture
+2. **Pick** — The UI shows all three strategies side-by-side; you choose one to take into approval
+3. **Approval gate** — Each pending edit is presented one at a time; you approve or reject; approved edits accumulate on the contract live
+4. **Rollback** — Any approved edit can be superseded (append-only rollback, not destructive), restoring the previous clause state
+5. **Merge** — Once done, the review branch merges to `main` and the audit log is committed alongside the final contract
+6. **Resume** — The active review is persisted; reload the page and the gate resumes from exact state
 
 ### What Mesa Provides
 
 | Capability | How it's used |
 |---|---|
-| **Branching** | Each agent works on an isolated branch — no interference |
-| **Merge** | Winning strategy's portfolio merges cleanly to main |
-| **History** | Every round's proposals are stored for instant replay |
-| **Snapshots** | Each round snapshots `main` so the full state is recoverable |
-| **Audit trail** | The shared playbook accumulates reasoning across rounds |
+| **Branching** | Each attorney works on an isolated branch — no interference between postures |
+| **Resume** | `active-review.json` on `main` tracks the pointer; reloading resumes from exact state |
+| **Rollback** | Append-only supersede — rolled-back edits are logged, not destroyed |
+| **Merge** | Approved contract merges cleanly to `main` with full change history |
+| **Audit trail** | Every approve/reject/rollback event is committed to `audit-log.json` |
+| **History** | Mesa change log preserves every operation for later inspection |
 
-## Agents
+## Attorney Postures
 
-| Agent | Lens | Signals | Style |
-|---|---|---|---|
-| **Fundamentals** `◆` | Value investing | P/E ratios, revenue growth, intrinsic value | Patient, Buffett-style |
-| **Sentiment** `●` | Market narrative | News headlines, crowd psychology, momentum | Fast, reactive |
-| **Technical** `▲` | Chart patterns | 20/50-day SMA, 5-day momentum, price ranges | Trend-following |
-
-Each agent reads the shared **playbook** before acting — a Markdown file on Mesa's `main` branch where all agents log observations, reasoning, and confidence levels. Over multiple rounds, they reference their own (and each other's) past entries to refine their approach.
+| Posture | Approach | Typical edits |
+|---|---|---|
+| **Aggressive** `▲` | Maximum protection for the Customer | Tight liability caps, flip one-sided terms, strip vendor data rights, remove auto-renewal |
+| **Balanced** `◆` | Fair, market-standard terms | Mutual caps, standard carve-outs, sensible security obligations |
+| **Minimal** `●` | Highest-impact changes only | Two or three must-have fixes; leave everything else to speed signing |
 
 ## Quick Start
 
@@ -85,7 +83,9 @@ Open **http://localhost:4000**
 
 On first launch, the app prompts you to add your **Anthropic API key** in the Settings panel. No `.env` file needed — keys are encrypted and stored locally in a SQLite database (`.mesa/config.db`).
 
-Optionally add a **Mesa API key** to switch from the local filesystem backend to Mesa's cloud API (`api.mesa.dev`) for real versioned storage with sub-50ms reads and full audit trail.
+Optionally add a **Mesa API key** to switch from the local filesystem backend to Mesa's cloud API (`api.mesa.dev`) for real versioned storage with sub-50ms reads and a full audit trail backed by Mesa's history.
+
+Without an Anthropic key, the demo runs on canned redlines so you can explore the full approval gate flow immediately.
 
 ## Architecture
 
@@ -93,8 +93,8 @@ Optionally add a **Mesa API key** to switch from the local filesystem backend to
 ┌─────────────────────────────────────────────────────────────┐
 │  Browser (React + Tailwind)                                 │
 │  ┌──────────────┐ ┌──────────────┐ ┌──────────────────────┐ │
-│  │ Portfolio     │ │ Branch viz + │ │ Settings Panel       │ │
-│  │ display       │ │ agent cards  │ │ keys, backends, tags │ │
+│  │ ContractView  │ │ ApprovalGate │ │ Settings Panel       │ │
+│  │ (live clauses)│ │ (edit queue) │ │ keys, backends, tags │ │
 │  └──────┬───────┘ └──────┬───────┘ └──────────┬───────────┘ │
 │         │                │                     │             │
 │  ┌──────┴────────────────┴─────────────────────┴──────────┐  │
@@ -105,8 +105,9 @@ Optionally add a **Mesa API key** to switch from the local filesystem backend to
 ┌───────────────────────────┼──────────────────────────────────┐
 │  Express Server           │                                  │
 │  ┌────────────────────────┴─────────────────────────────┐    │
-│  │ Routes: analyze, merge, replay, settings, reset,     │    │
-│  │         changes, repo/tags, webhooks/targets          │    │
+│  │ Routes: contract, review/start|pick|approve|reject|  │    │
+│  │         rollback|merge|active, audit, settings,      │    │
+│  │         reset, changes, repo/tags, webhooks/targets  │    │
 │  └──────────────────────┬───────────────────────────────┘    │
 │                         │                                    │
 │  ┌──────────────────────┼───────────────────────────────┐    │
@@ -117,10 +118,11 @@ Optionally add a **Mesa API key** to switch from the local filesystem backend to
 │  │ └─────────────┘ └──────────────┘ └──────────────┘   │    │
 │  └──────────────────────────────────────────────────────┘    │
 │                                                              │
-│  ┌────────────┐ ┌─────────────┐ ┌───────────────────┐       │
-│  │ Claude API │ │Yahoo Finance│ │ SQLite config.db   │       │
-│  │ (agents)   │ │(market data)│ │ (encrypted keys)   │       │
-│  └────────────┘ └─────────────┘ └───────────────────┘       │
+│  ┌────────────┐ ┌──────────────────┐ ┌───────────────────┐   │
+│  │ Claude API │ │ Review + Gate    │ │ SQLite config.db   │   │
+│  │ (redlining)│ │ (approve/reject/ │ │ (encrypted keys)   │   │
+│  └────────────┘ │  rollback/merge) │ └───────────────────┘   │
+│                 └──────────────────┘                         │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -141,10 +143,10 @@ How much of the Mesa SDK (`@mesadev/sdk` v0.28.2) this demo exercises:
 | SDK Resource | Methods Used | Where in Demo |
 |---|---|---|
 | **Repos** | `get`, `create`, `delete`, `update` | Init, reset, repo tags |
-| **Bookmarks** | `list`, `create`, `delete`, `move`, `merge` | Fork, merge, delete branches |
-| **Changes** | `list`, `create`, `get` | Write files, commit history, change timeline |
-| **Content** | `get` (file + directory) | Read files, list directory entries |
-| **Diffs** | `get` | Compare agent branch vs main |
+| **Bookmarks** | `list`, `create`, `delete`, `move`, `merge` | Fork posture branches, merge review to main |
+| **Changes** | `list`, `create`, `get` | Write files, audit log, change history |
+| **Content** | `get` (file + directory) | Read contract, read review state |
+| **Diffs** | `get` | Compare redline branch vs main |
 | **Webhook Targets** | `list`, `create`, `delete` | Settings panel CRUD |
 | **Webhooks** | `on`, `receive` | Inbound webhook events → activity feed |
 | **fs.mount** | `MesaFileSystem.create` | Third backend (`MountedMesa`) |
@@ -153,23 +155,22 @@ How much of the Mesa SDK (`@mesadev/sdk` v0.28.2) this demo exercises:
 | **Org** | `resolveOrg` | Resolve org slug on init |
 | **Auth** | `whoami` | Validate API key, show connection info |
 | API Keys | — | Not used (keys managed outside the demo) |
-| Repo tag bulk update | — | Not used (single-repo demo) |
 
 ## Features
 
-- **Animated branch visualization** — SVG tree animates through fork → analyze → merge in real time
-- **Three competing AI agents** with distinct strategies and real market data
-- **Shared playbook** — agents read each other's past reasoning and improve over time
-- **Compact proposal cards** — trade bullets in plain English, portfolio impact at a glance
-- **True replay** — instantly view any past round's original proposals with the chosen strategy highlighted
+- **Human-in-the-loop approval gate** — clause-by-clause review pauses after each decision; resume from exact state on reload
+- **Immutable audit trail** — every approve, reject, and rollback is appended to `audit-log.json` on the review branch, then committed to `main` at merge
+- **Append-only rollback** — rolled-back edits are superseded in the log, not deleted; the full decision history is always recoverable
+- **Three attorney postures** — Aggressive, Balanced, Minimal — each producing distinct redlines from the same contract
+- **Animated branch visualization** — SVG tree animates through fork → review → merge in real time
+- **Canned fallback** — full demo flow works without an Anthropic key using pre-baked redlines
 - **Live activity feed** — SSE-powered stream of every Mesa operation (branch, write, merge)
-- **Change timeline** — full Mesa commit log with expandable change details (hash, author, timestamp)
 - **Three swappable backends** — local filesystem, Mesa REST API, or Mesa fs.mount — switch live in Settings
 - **Webhook target management** — register, list, and delete webhook endpoints from Settings
 - **Repository tags** — key-value metadata on the Mesa repo, editable from Settings
 - **Zero-config setup** — API keys entered in UI, encrypted in local SQLite, no .env needed
-- **Demo reset** — clear all history and start fresh from Settings
+- **Demo reset** — clear all review history and start fresh from Settings
 
 ## Tech Stack
 
-React, Vite, Tailwind CSS v4, Node.js, Express, Claude Haiku, Yahoo Finance, Mesa SDK, better-sqlite3
+React, Vite, Tailwind CSS v4, Node.js, Express, Claude Haiku, Mesa SDK, better-sqlite3

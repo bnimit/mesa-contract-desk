@@ -6,7 +6,7 @@ import { resolve } from "path";
 const DB_DIR = resolve(process.cwd(), ".mesa");
 const DB_PATH = resolve(DB_DIR, "config.db");
 
-const ENC_KEY = scryptSync("mesa-portfolio-advisor-local", "mesa-salt", 32);
+const ENC_KEY = scryptSync("mesa-contract-desk-local", "mesa-salt", 32);
 
 let db: Database.Database;
 
