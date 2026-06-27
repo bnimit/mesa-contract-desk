@@ -11,4 +11,10 @@ describe("personas", () => {
     expect(getPersona("legal").label).toBe("Legal Counsel");
     expect(getPersona("legal").color).toMatch(/^#/);
   });
+  it("every persona has a non-empty icon and pitch", () => {
+    for (const p of PERSONAS) {
+      expect(p.icon.length, p.id).toBeGreaterThan(0);
+      expect(p.pitch.length, p.id).toBeGreaterThan(0);
+    }
+  });
 });

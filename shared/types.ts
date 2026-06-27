@@ -111,6 +111,8 @@ export interface Persona {
   domain: string;        // what this reviewer redlines (used in the agent prompt + UI)
   color: string;         // hex, for cards / branches / audit
   cannedAvailable: boolean;
+  icon: string;          // emoji for the vantage point (UI only)
+  pitch: string;         // one-line "what they push for" (UI only)
 }
 
 export interface ClauseProposal {

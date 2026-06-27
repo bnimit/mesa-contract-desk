@@ -8,6 +8,7 @@ import { ActivityFeed } from "./components/ActivityFeed.js";
 import { BranchVisualization, type VizPhase } from "./components/BranchVisualization.js";
 import { SettingsPanel } from "./components/SettingsPanel.js";
 import { HowItWorks } from "./components/HowItWorks.js";
+import { HeroFlow } from "./components/HeroFlow.js";
 import type { Department } from "./types.js";
 
 export default function App() {
@@ -59,6 +60,9 @@ export default function App() {
     const p = personas.find((x) => x.id === id);
     return { id, label: p?.label ?? id, color: p?.color ?? "#34d399" };
   });
+  const selectedPersonas = selected
+    .map((id) => personas.find((p) => p.id === id))
+    .filter((p): p is NonNullable<typeof p> => !!p);
 
   return (
     <div className="min-h-screen text-ink">
@@ -104,10 +108,11 @@ export default function App() {
       <main className="max-w-6xl mx-auto px-8 py-14">
         {/* Hero */}
         <section className="rounded-2xl bg-gradient-to-b from-canvas to-canvas-2 border border-line px-9 py-12 mb-8 reveal">
-          <div className="pill pill-ok mb-4">Counsel-in-the-loop · versioned filesystem</div>
-          <h1 className="display-heading text-5xl md:text-6xl leading-[1.04] max-w-2xl">
-            Your departments redline in parallel,<br /><span className="text-mesa">you merge the best of each.</span>
+          <div className="pill pill-ok mb-4">Counsel-in-the-loop · on a versioned filesystem</div>
+          <h1 className="display-heading text-4xl md:text-5xl leading-[1.08] max-w-3xl">
+            Your whole review team reads one contract — at the same time — and you keep the best of each.
           </h1>
+          <HeroFlow reviewers={selectedPersonas} />
         </section>
 
         {/* How it works */}
