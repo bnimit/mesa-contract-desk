@@ -47,7 +47,7 @@ const AGENTS: AgentDef[] = [
     key: "Minimal",
     label: "Minimal",
     sigil: "●",
-    color: "var(--color-mute)",
+    color: "#94a3b8",
     y: 210,
     forkDelay: "0.6s",
     path: "M 68,130 C 180,130 260,210 432,210",
@@ -113,7 +113,7 @@ export function BranchVisualization({
           cx={60}
           cy={130}
           r={10}
-          fill="var(--color-ink)"
+          fill="#34d399"
           style={{
             transformOrigin: "60px 130px",
             animation: "node-enter 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both",
@@ -123,7 +123,7 @@ export function BranchVisualization({
           x={60}
           y={160}
           textAnchor="middle"
-          fill="var(--color-ink)"
+          fill="#cbd5e1"
           fontFamily="var(--font-mono)"
           fontSize={11}
           style={{ animation: "fade-in 0.3s 0.2s both" }}
@@ -223,7 +223,7 @@ export function BranchVisualization({
               <text
                 x={458}
                 y={agent.y - 8}
-                fill={isLoser || fadeAll ? "var(--color-mute-2)" : agent.color}
+                fill={isLoser || fadeAll ? "#7fb8a4" : agent.color}
                 fontFamily="var(--font-mono)"
                 fontSize={11}
                 fontWeight={600}
@@ -237,7 +237,7 @@ export function BranchVisualization({
               <text
                 x={458}
                 y={agent.y + 6}
-                fill={isLoser || fadeAll ? "var(--color-mute-2)" : "var(--color-ink-2)"}
+                fill={isLoser || fadeAll ? "#7fb8a4" : "#cbd5e1"}
                 fontFamily="var(--font-mono)"
                 fontSize={11}
                 style={{
@@ -283,7 +283,7 @@ export function BranchVisualization({
             <path
               d={winner.mergePath}
               fill="none"
-              stroke="var(--color-ink)"
+              stroke="#34d399"
               strokeWidth={2.5}
               strokeLinecap="round"
               pathLength={1}
@@ -306,7 +306,7 @@ export function BranchVisualization({
                 cx={700}
                 cy={130}
                 r={10}
-                fill="var(--color-ink)"
+                fill="#34d399"
                 style={{
                   transformOrigin: "700px 130px",
                   animation:
@@ -317,7 +317,7 @@ export function BranchVisualization({
                 x={700}
                 y={160}
                 textAnchor="middle"
-                fill="var(--color-ink)"
+                fill="#cbd5e1"
                 fontFamily="var(--font-mono)"
                 fontSize={11}
                 style={{ animation: "fade-in 0.3s 1.1s both" }}
@@ -330,7 +330,7 @@ export function BranchVisualization({
       </svg>
 
       {/* Phase description */}
-      <div className="text-center mt-4">
+      <div className="text-center mt-4 [&_p]:!text-[#7fb8a4]">
         {phase === "fork" && (
           <p className="section-label fade-in">
             Forking contract to three attorney branches…

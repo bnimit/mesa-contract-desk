@@ -27,12 +27,34 @@ export default function App() {
   const [hasOpenedSettings, setHasOpenedSettings] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [vizGeneration, setVizGeneration] = useState(0);
+  const [vizPhase, setVizPhase] = useState<VizPhase | null>(null);
+  const [mergeViz, setMergeViz] = useState(false);
 
-  useEffect(() => { if (busy) setVizGeneration((g) => g + 1); }, [busy]);
+  // Drive the pipeline animation from real workflow state.
+  useEffect(() => {
+    if (mergeViz) return; // hold merge/complete window
+    if (!review) { setVizPhase(null); return; }
+    if (review.status === "picking") {
+      const agentsStarted = mesaEvents.some((e) => e.type === "analysis_started");
+      setVizPhase(agentsStarted ? "analyze" : "fork");
+    } else if (review.status === "gating") {
+      setVizPhase("done");
+    }
+  }, [review, mesaEvents, mergeViz]);
+
+  useEffect(() => {
+    if (busy && review?.status === "picking") setVizGeneration((g) => g + 1);
+  }, [busy, review]);
+
+  const handleMerge = useCallback(async () => {
+    setMergeViz(true);
+    setVizPhase("merge");
+    setTimeout(() => setVizPhase("complete"), 700);
+    await merge();
+    setTimeout(() => { setMergeViz(false); setVizPhase(null); }, 1700);
+  }, [merge]);
 
   const activeBackend = backends.find((b) => b.active);
-  const phase: "idle" | "picking" | "gating" = !review ? "idle" : review.status === "picking" ? "picking" : "gating";
-  const vizPhase: VizPhase | null = phase === "picking" ? "analyze" : phase === "gating" ? "done" : null;
 
   return (
     <div className="min-h-screen text-ink">
@@ -88,13 +110,22 @@ export default function App() {
               <span className="group-hover:translate-x-0.5 transition-transform">→</span>
             </button>
             {!keys.anthropic && (
-              <span className="text-sm text-mute">Runs with sample redlines — add an Anthropic key in Settings for live agents.</span>
+              <span className="text-sm text-mute">Runs with sample redlines — add an Anthropic key in{" "}<button onClick={() => { setSettingsOpen(true); setHasOpenedSettings(true); }} className="underline decoration-dotted underline-offset-2 hover:text-mesa cursor-pointer">Settings</button>{" "}for live agents.</span>
             )}
           </div>
         </section>
 
         {/* How it works */}
         <section className="mb-8"><HowItWorks /></section>
+
+        {/* Pipeline animation — persistent across picking, gating, and merge */}
+        {vizPhase && (
+          <section className="mb-8">
+            <div className="panel-dark p-5">
+              <BranchVisualization key={vizGeneration} phase={vizPhase} events={mesaEvents} winnerAgent={mergeViz && review?.posture ? review.posture.charAt(0).toUpperCase() + review.posture.slice(1) : undefined} />
+            </div>
+          </section>
+        )}
 
         {/* Contract */}
         <section className="mb-8">
@@ -106,11 +137,6 @@ export default function App() {
         {review && review.status === "picking" && (
           <section className="mb-8">
             <div className="section-label mb-3">Review</div>
-            {vizPhase && (
-              <div className="panel-dark p-5 mb-6">
-                <BranchVisualization key={vizGeneration} phase={vizPhase} events={mesaEvents} />
-              </div>
-            )}
             <RedlineComparison strategies={strategies} onPick={pick} busy={busy} />
           </section>
         )}
@@ -119,7 +145,7 @@ export default function App() {
         {review && review.status === "gating" && (
           <section className="mb-8">
             <div className="section-label mb-3">Approval gate</div>
-            <ApprovalGate review={review} onApprove={approve} onReject={reject} onRollback={rollback} onMerge={merge} busy={busy} />
+            <ApprovalGate review={review} onApprove={approve} onReject={reject} onRollback={rollback} onMerge={handleMerge} busy={busy} />
           </section>
         )}
 
