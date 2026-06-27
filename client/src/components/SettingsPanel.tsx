@@ -166,7 +166,7 @@ export function SettingsPanel({
                 <button
                   onClick={handleClear}
                   disabled={saving}
-                  className="font-mono text-xs uppercase tracking-widest px-4 py-2 border border-line text-ink hover:border-down hover:text-down transition-colors disabled:opacity-40"
+                  className="font-mono text-xs uppercase tracking-widest px-4 py-2 border border-line text-ink hover:border-down hover:text-down rounded-lg transition-colors disabled:opacity-40"
                 >
                   Clear all keys
                 </button>
