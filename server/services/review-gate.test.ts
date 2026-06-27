@@ -29,6 +29,7 @@ describe("cherry-pick gate (local-fs)", () => {
     }
     const merged = await mergeReview(1200);
     expect(merged.meta.version).toBe(2);
+    expect(await getActiveReview()).toBeNull();
   });
   it("skip keeps original; getActiveReview rehydrates decisions", async () => {
     await startReview(1300, ["legal", "finance", "security"]);

@@ -4,7 +4,7 @@ import { SAMPLE_CONTRACT } from "../data/sample-contract.js";
 import { runRedlineAgent } from "../agents/redline.js";
 import { getPersona } from "../data/personas.js";
 import { emitActivity } from "../routes/events.js";
-import type { Contract, Department, ClauseDecision, ReviewState, AuditEvent } from "../../shared/types.js";
+import type { Contract, Department, ClauseDecision, ReviewState, AuditEvent, RedlineEdit } from "../../shared/types.js";
 
 const MAIN = "main";
 const CONTRACT_FILE = "contract.json";
@@ -53,7 +53,7 @@ export async function startReview(id: number, departments: Department[]): Promis
   await clearActiveReview();
   const base = await getContract();
 
-  const contributions: { department: Department; edits: import("../../shared/types.js").RedlineEdit[] }[] = [];
+  const contributions: { department: Department; edits: RedlineEdit[] }[] = [];
   for (const d of departments) {
     const persona = getPersona(d);
     const branch = departmentBranch(id, d);
@@ -97,6 +97,7 @@ async function departmentsOf(id: number): Promise<Department[]> {
 
 export async function acceptEdit(id: number, decisionId: string, department: Department): Promise<ReviewState> {
   const { base, decisions, audit } = await load(id);
+  if (!decisions.find((d) => d.id === decisionId)) throw new Error(`Decision ${decisionId} not found`);
   const next = decisions.map((d) => d.id === decisionId ? { ...d, acceptedDepartment: department, decided: true } : d);
   const d = next.find((x) => x.id === decisionId);
   const ev = newAuditEvent({ kind: "approved", editId: decisionId, clauseHeading: d?.heading, author: getPersona(department).label, approver: "you", justification: d?.proposals.find((p) => p.department === department)?.edit.justification });
@@ -106,6 +107,7 @@ export async function acceptEdit(id: number, decisionId: string, department: Dep
 
 export async function skipDecision(id: number, decisionId: string): Promise<ReviewState> {
   const { base, decisions, audit } = await load(id);
+  if (!decisions.find((d) => d.id === decisionId)) throw new Error(`Decision ${decisionId} not found`);
   const next = decisions.map((d) => d.id === decisionId ? { ...d, acceptedDepartment: null, decided: true } : d);
   const d = next.find((x) => x.id === decisionId);
   const ev = newAuditEvent({ kind: "rejected", editId: decisionId, clauseHeading: d?.heading, author: "human reviewer", approver: "you", justification: "Kept original" });
