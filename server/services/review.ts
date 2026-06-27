@@ -63,19 +63,23 @@ export async function startReview(id: number, departments: Department[]): Promis
   const base = await getContract();
   const canned = await readJson<CannedSet | null>(MAIN, CANNED_FILE, null);
 
-  const contributions: { department: Department; edits: RedlineEdit[] }[] = [];
-  for (const d of departments) {
-    const persona = getPersona(d);
-    const branch = departmentBranch(id, d);
-    await getMesa().createBranch(branch, MAIN);
-    emitActivity("branch_created", `Forked ${branch} for ${persona.label}`, { branch });
-    emitActivity("analysis_started", `${persona.label} reviewing contract`, { agent: persona.label, branch });
-    const cannedForDept = canned && (d === "legal" || d === "finance" || d === "security") ? canned[d] : undefined;
-    const edits = await runRedlineAgent(base, d, cannedForDept);
-    await writeJson(branch, "redlines.json", edits);
-    emitActivity("agent_complete", `${persona.label}: ${edits.length} edit(s)`, { agent: persona.label, branch });
-    contributions.push({ department: d, edits });
-  }
+  // Run every department reviewer in parallel — each on its own isolated Mesa
+  // branch, the way Mesa is meant to be used. Promise.all preserves the
+  // departments[] order, so decisions/proposals stay deterministic.
+  const contributions: { department: Department; edits: RedlineEdit[] }[] = await Promise.all(
+    departments.map(async (d) => {
+      const persona = getPersona(d);
+      const branch = departmentBranch(id, d);
+      await getMesa().createBranch(branch, MAIN);
+      emitActivity("branch_created", `Forked ${branch} for ${persona.label}`, { branch });
+      emitActivity("analysis_started", `${persona.label} reviewing contract`, { agent: persona.label, branch });
+      const cannedForDept = canned && (d === "legal" || d === "finance" || d === "security") ? canned[d] : undefined;
+      const edits = await runRedlineAgent(base, d, cannedForDept);
+      await writeJson(branch, "redlines.json", edits);
+      emitActivity("agent_complete", `${persona.label}: ${edits.length} edit(s)`, { agent: persona.label, branch });
+      return { department: d, edits };
+    })
+  );
 
   const decisions = buildDecisions(base, contributions);
   const branch = reviewBranch(id);
