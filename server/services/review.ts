@@ -13,7 +13,6 @@ const AUDIT_WORK_FILE = "audit.json"; // per-review working audit, on the review
 
 export const reviewBranch = (id: number) => `review/${id}`;
 export const postureBranch = (id: number, p: Posture) => `review/${id}/${p}`;
-export const snapshotBranch = (id: number) => `snapshot/${id}`;
 
 interface ActivePointer {
   id: number;
@@ -49,12 +48,20 @@ export function newAuditEvent(e: Omit<AuditEvent, "id" | "timestamp">): AuditEve
   return { ...e, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, timestamp: Date.now() };
 }
 
+/** Delete the branches and null the active pointer for whatever review is currently active. */
+export async function clearActiveReview(): Promise<void> {
+  const ptr = await readJson<ActivePointer | null>(MAIN, ACTIVE_FILE, null);
+  if (ptr) {
+    for (const cfg of POSTURES) await getMesa().deleteBranch(postureBranch(ptr.id, cfg.posture));
+    await getMesa().deleteBranch(reviewBranch(ptr.id));
+  }
+  await writeJson(MAIN, ACTIVE_FILE, null);
+}
+
 /** Fork three posture branches, run agents, persist redlines.json on each. */
 export async function startReview(id: number): Promise<RedlineStrategy[]> {
+  await clearActiveReview();
   const base = await getContract();
-
-  // Snapshot main as the rollback baseline.
-  await getMesa().createBranch(snapshotBranch(id), MAIN);
 
   const strategies: RedlineStrategy[] = [];
   for (const cfg of POSTURES) {

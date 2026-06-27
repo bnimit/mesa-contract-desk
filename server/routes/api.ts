@@ -5,7 +5,7 @@ import { reinitializeAnthropic, clearAnthropic } from "../services/claude.js";
 import { emitActivity } from "./events.js";
 import {
   getContract, startReview, pickStrategy, approveNext, rejectNext,
-  rollbackLast, mergeReview, getActiveReview, getAuditTrail,
+  rollbackLast, mergeReview, getActiveReview, getAuditTrail, clearActiveReview,
 } from "../services/review.js";
 import type { StorageBackend, Posture } from "../../shared/types.js";
 
@@ -272,9 +272,9 @@ apiRouter.delete("/settings/keys", async (_req, res) => {
 apiRouter.post("/reset", async (_req, res) => {
   try {
     const { SAMPLE_CONTRACT } = await import("../data/sample-contract.js");
+    await clearActiveReview();
     await getMesa().writeFile("main", "contract.json", JSON.stringify(SAMPLE_CONTRACT, null, 2));
     await getMesa().writeFile("main", "audit-log.json", JSON.stringify([]));
-    await getMesa().writeFile("main", "active-review.json", JSON.stringify(null));
     emitActivity("file_written", "Demo reset — contract restored to v1, audit cleared");
     res.json({ ok: true });
   } catch (error) {
