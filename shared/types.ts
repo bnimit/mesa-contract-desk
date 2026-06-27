@@ -146,3 +146,66 @@ export interface MesaChange {
 
 // ── Repository Tags ──────────────────────────────────────────────────
 export type RepoTags = Record<string, string>;
+
+// ── Contract Redline Workflow ────────────────────────────────────────
+export interface Clause {
+  id: string;        // stable slug, e.g. "liability"
+  heading: string;   // "8. Limitation of Liability"
+  text: string;
+}
+
+export interface ContractMeta {
+  title: string;
+  parties: string[];
+  version: number;
+  lastApproved: string | null; // ISO timestamp
+}
+
+export interface Contract {
+  meta: ContractMeta;
+  clauses: Clause[];
+}
+
+export type Posture = "aggressive" | "balanced" | "minimal";
+
+export interface RedlineEdit {
+  id: string;                      // unique within a strategy, e.g. "e1"
+  type: "replace" | "delete" | "insert";
+  targetClauseId?: string;         // replace | delete
+  afterClauseId?: string | null;   // insert position (null = prepend)
+  heading?: string;                // insert | replace (new heading)
+  proposedText?: string;           // replace | insert
+  justification: string;
+}
+
+export interface RedlineStrategy {
+  posture: Posture;
+  branch: string;
+  edits: RedlineEdit[];
+  summary: string;
+}
+
+export interface AuditEvent {
+  id: string;
+  kind: "proposed" | "approved" | "rejected" | "rolled_back" | "merged";
+  editId?: string;
+  clauseHeading?: string;
+  author: string;      // posture name or "human reviewer"
+  approver?: string;
+  justification?: string;
+  timestamp: number;
+}
+
+export interface ReviewState {
+  id: number;                              // timestamp
+  status: "picking" | "gating" | "merged";
+  posture: Posture | null;
+  branch: string | null;                   // review/{id} once picked
+  base: Contract;
+  contract: Contract;                      // base ⊕ applied
+  pending: RedlineEdit[];
+  applied: RedlineEdit[];
+  rejected: RedlineEdit[];
+  audit: AuditEvent[];
+  strategies?: RedlineStrategy[];          // present while status === "picking"
+}

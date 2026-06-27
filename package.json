@@ -11,7 +11,8 @@
     "dev:server": "tsx watch server/index.ts",
     "dev": "npm run dev:server & npm run dev:client",
     "build": "vite build --config vite.config.ts && tsc -p tsconfig.server.json",
-    "start": "node dist-server/server/index.js"
+    "start": "node dist-server/server/index.js",
+    "test": "vitest run"
   },
   "keywords": [],
   "author": "",
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.0",
+    "vitest": "^3.2.4",
     "@types/better-sqlite3": "^7.6.13",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
