@@ -6,7 +6,9 @@ import { emitActivity } from "./events.js";
 import {
   getContract, startReview, acceptEdit, skipDecision,
   mergeReview, getActiveReview, getAuditTrail, clearActiveReview,
+  setContract,
 } from "../services/review.js";
+import { SAMPLES, getSample } from "../services/intake.js";
 import { PERSONAS } from "../data/personas.js";
 import type { StorageBackend, Department } from "../../shared/types.js";
 
@@ -35,6 +37,16 @@ apiRouter.get("/contract", async (_req, res) => {
 });
 
 apiRouter.get("/personas", (_req, res) => res.json({ personas: PERSONAS }));
+
+apiRouter.get("/samples", (_req, res) => res.json({ samples: SAMPLES.map((s) => ({ id: s.id, title: s.title })) }));
+apiRouter.post("/contract/sample", async (req, res) => {
+  try {
+    const { id } = req.body as { id: string };
+    const sample = getSample(id);
+    await setContract(sample.contract);
+    res.json({ contract: sample.contract });
+  } catch (error) { res.status(400).json({ error: error instanceof Error ? error.message : "Failed to load sample" }); }
+});
 
 apiRouter.post("/review/start", async (req, res) => {
   try {
