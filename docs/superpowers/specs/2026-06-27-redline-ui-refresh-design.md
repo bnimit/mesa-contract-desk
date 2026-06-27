@@ -21,10 +21,11 @@ A clean, modern fintech-legal look. No beige anywhere.
 - Status pill (needs-approval / paused): `#92400e` on `#fef3c7`.
 - The animated pipeline sits on a dark panel: bg `#0c1512`, with green `#34d399` / red `#ef4444` / grey `#94a3b8` branches.
 
-**Type:**
-- Display headings: a serif **distinct from the old demo's Fraunces** — use `Newsreader` (Google Fonts), with `"Times New Roman", Georgia, serif` fallback.
+**Type:** a **modern sans identity** — a clean break from the old demo's literary-serif (Fraunces) look, reading "fintech / dev-tool product" rather than editorial.
+- Display headings: `Space Grotesk` (Google Fonts) — geometric, characterful sans — with `"Inter", system-ui, sans-serif` fallback. **No serif display.**
 - Body/UI: `Inter` (Google Fonts), `system-ui, sans-serif` fallback. (Replaces DM Sans.)
 - Mono (technical labels, branch names): keep `JetBrains Mono`.
+- The old `.serif-quote` italic-serif accent is repurposed to clean sans (normal style); contract/clause text renders in the body sans (Inter), not a serif.
 
 **Shape language:** rounded cards (`border-radius` 10–14px), soft green-tinted shadows (`0 4px 12px rgba(6,78,59,.06)`), pill-shaped status badges. This is a clear departure from the old demo's hard-edged editorial blocks and "01/02/03" giant section numbers (those numbers are dropped).
 
@@ -67,7 +68,7 @@ Re-theme the SVG colors to the dark-panel palette (green/red/grey branches, whit
 
 ## Success criteria
 
-- The page no longer reads as the beige portfolio demo: white canvas, forest-green primary, serif-display + Inter, rounded product cards.
+- The page no longer reads as the beige portfolio demo: white canvas, forest-green primary, modern sans display (Space Grotesk) + Inter body, rounded product cards.
 - A first-time visitor can read the 4-step strip and understand fork→approve→merge→audit without running anything.
 - Running a review animates: forks appear, branches light as counsel finish, and the merge animates back to a new `main` version.
 - `npm run build` is green; all existing functionality (backends, settings, clear-keys, canned fallback) still works.

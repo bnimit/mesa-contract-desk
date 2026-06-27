@@ -13,7 +13,7 @@
 - TypeScript, ESM, NodeNext — `.js` extensions on all relative imports.
 - **Frontend only** — do not touch `server/`, routes, hooks' fetch logic, or workflow behavior. Preserve all existing functionality (three backends, settings, clear-keys, canned no-key fallback).
 - **No beige.** Canvas `#fbfcfb`/`#f4f8f5`; primary forest green `#047857`/`#065f46`; accent mint `#34d399`/`#ecfdf5`; ink `#0c1512`; muted `#6b827a`; lines `#e6ede9`/`#d1ddd6`; redline deleted `#991b1b` on `#fdf2f2`, added `#166534` on `#eefbf3`; status pill `#92400e` on `#fef3c7`; pipeline panel dark `#0c1512`.
-- Fonts: display `Newsreader` (serif, **not** Fraunces), body `Inter`, mono `JetBrains Mono`.
+- Fonts: display `Space Grotesk` (modern **sans**, not a serif, not Fraunces), body `Inter`, mono `JetBrains Mono`. The `.serif-quote` utility is repurposed to clean sans; contract/clause text uses the body sans.
 - No automated UI tests exist in this repo (no React Testing Library — do not add it). Verification per task = `npx tsc`-clean `npm run build` (zero errors) + a self-check of the changed markup against the spec mock. The user does the final visual pass.
 - Commit at the end of each task.
 - Spec: `docs/superpowers/specs/2026-06-27-redline-ui-refresh-design.md`.
@@ -37,7 +37,7 @@ Replace the `<title>` and the Google Fonts `<link>` (lines ~6 and ~10):
 ```
 ```html
     <link
-      href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&family=Inter:wght@400..700&family=JetBrains+Mono:wght@300..700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400..700&family=Inter:wght@400..700&family=JetBrains+Mono:wght@300..700&display=swap"
       rel="stylesheet"
     />
 ```
@@ -49,7 +49,7 @@ Replace lines 1–51 (the `@import`, `@theme`, `*`, `html,body`, `body`, `::sele
 @import "tailwindcss";
 
 @theme {
-  --font-display: "Newsreader", "Times New Roman", Georgia, serif;
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
   --font-sans: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "Menlo", monospace;
 
@@ -100,12 +100,19 @@ body {
 
 - [ ] **Step 3: Update `.display-heading`, diff tints, and add card/pill utilities**
 
-In `client/src/index.css`, change `.display-heading` (it referenced Fraunces optical sizing which Newsreader doesn't use) to:
+In `client/src/index.css`, change `.display-heading` (it referenced Fraunces optical sizing, no longer relevant) to a tight, assertive sans, and repurpose `.serif-quote` to clean sans (Space Grotesk is a sans, so italic-serif accents would clash):
 ```css
 .display-heading {
   font-family: var(--font-display);
-  font-weight: 500;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.serif-quote {
+  font-family: var(--font-sans);
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: -0.005em;
 }
 ```
 Replace `.diff-added` and `.diff-deleted`:
@@ -453,7 +460,7 @@ git commit -m "feat(ui): drive pipeline animation through full lifecycle; theme 
 ```tsx
       <div className="h-1.5 bg-line/60"><div className="h-full bg-mesa transition-all" style={{ width: `${total ? (done / total) * 100 : 0}%` }} /></div>
 ```
-Change the "Paused on Mesa · resumes from exact state…" line into a pill: wrap it as `<span className="pill pill-warn">paused · resumes from exact state</span>`. The REVISE/INSERT/DELETE label `text-mesa` stays. Deleted diff: add `text-down`; added diff: `text-ink` → `text-up`. Approve button `bg-ink text-canvas hover:bg-up` → `bg-mesa text-white rounded-lg hover:bg-[color:var(--color-up)]`; Reject button add `rounded-lg`; roll-back add `rounded-lg`. Merge button `bg-mesa text-canvas hover:bg-ink` → `bg-mesa text-white rounded-lg hover:bg-[color:var(--color-up)]`. Replace the inline `font-serif` on diff blocks with `font-display`.
+Change the "Paused on Mesa · resumes from exact state…" line into a pill: wrap it as `<span className="pill pill-warn">paused · resumes from exact state</span>`. The REVISE/INSERT/DELETE label `text-mesa` stays. Deleted diff: add `text-down`; added diff: `text-ink` → `text-up`. Approve button `bg-ink text-canvas hover:bg-up` → `bg-mesa text-white rounded-lg hover:bg-[color:var(--color-up)]`; Reject button add `rounded-lg`; roll-back add `rounded-lg`. Merge button `bg-mesa text-canvas hover:bg-ink` → `bg-mesa text-white rounded-lg hover:bg-[color:var(--color-up)]`. Remove the inline `font-serif` on the diff blocks so the clause text renders in the body sans (Inter) — do not add `font-display` (that's for headings).
 
 - [ ] **Step 5: `AuditTrail.tsx`** — outer container → `card`. The `KIND_META` color classes map to tokens already; render each kind label as a pill: wrap the kind label span with `pill` plus `pill-ok` (approved/merged), `pill-bad` (rejected), or a neutral `pill` (proposed/rolled_back). Keep `max-h` scroll + `divide-y`.
 
