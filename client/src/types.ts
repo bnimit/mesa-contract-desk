@@ -17,6 +17,14 @@ export type {
   WebhookTarget,
   MesaChange,
   RepoTags,
+  Clause,
+  ContractMeta,
+  Contract,
+  Posture,
+  RedlineEdit,
+  RedlineStrategy,
+  AuditEvent,
+  ReviewState,
 } from "@shared/types.js";
 
 export interface PortfolioWithPrices {
