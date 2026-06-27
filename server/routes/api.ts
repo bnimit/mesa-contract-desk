@@ -4,10 +4,11 @@ import { hasKey, setKey, deleteKey, getKey } from "../services/config.js";
 import { reinitializeAnthropic, clearAnthropic } from "../services/claude.js";
 import { emitActivity } from "./events.js";
 import {
-  getContract, startReview, pickStrategy, approveNext, rejectNext,
-  rollbackLast, mergeReview, getActiveReview, getAuditTrail, clearActiveReview,
+  getContract, startReview, acceptEdit, skipDecision,
+  mergeReview, getActiveReview, getAuditTrail, clearActiveReview,
 } from "../services/review.js";
-import type { StorageBackend, Posture } from "../../shared/types.js";
+import { PERSONAS } from "../data/personas.js";
+import type { StorageBackend, Department } from "../../shared/types.js";
 
 export const apiRouter = Router();
 
@@ -33,63 +34,42 @@ apiRouter.get("/contract", async (_req, res) => {
   }
 });
 
-apiRouter.post("/review/start", async (_req, res) => {
+apiRouter.get("/personas", (_req, res) => res.json({ personas: PERSONAS }));
+
+apiRouter.post("/review/start", async (req, res) => {
   try {
-    const id = Date.now();
-    const strategies = await startReview(id);
-    res.json({ id, strategies });
-  } catch (error) {
-    console.error("Review start failed:", error);
-    res.status(500).json({ error: "Failed to start review" });
-  }
+    const { departments } = req.body as { departments: Department[] };
+    if (!Array.isArray(departments) || departments.length < 2 || departments.length > 4) {
+      res.status(400).json({ error: "Select 2–4 departments" }); return;
+    }
+    res.json(await startReview(Date.now(), departments));
+  } catch (error) { console.error("Review start failed:", error); res.status(500).json({ error: "Failed to start review" }); }
 });
 
-apiRouter.post("/review/pick", async (req, res) => {
+apiRouter.post("/review/accept", async (req, res) => {
   try {
-    const { id, posture } = req.body as { id: number; posture: Posture };
-    if (!id || !posture) { res.status(400).json({ error: "id and posture required" }); return; }
-    res.json(await pickStrategy(id, posture));
-  } catch (error) {
-    console.error("Pick failed:", error);
-    res.status(500).json({ error: "Failed to pick strategy" });
-  }
+    const { id, decisionId, department } = req.body as { id: number; decisionId: string; department: Department };
+    res.json(await acceptEdit(id, decisionId, department));
+  } catch (error) { console.error("Accept failed:", error); res.status(500).json({ error: "Accept failed" }); }
 });
 
-apiRouter.post("/review/approve", async (req, res) => {
+apiRouter.post("/review/skip", async (req, res) => {
   try {
-    const { id } = req.body as { id: number };
-    res.json(await approveNext(id, "you"));
-  } catch (error) { console.error("Approve failed:", error); res.status(500).json({ error: "Approve failed" }); }
-});
-
-apiRouter.post("/review/reject", async (req, res) => {
-  try {
-    const { id } = req.body as { id: number };
-    res.json(await rejectNext(id, "you"));
-  } catch (error) { console.error("Reject failed:", error); res.status(500).json({ error: "Reject failed" }); }
-});
-
-apiRouter.post("/review/rollback", async (req, res) => {
-  try {
-    const { id } = req.body as { id: number };
-    res.json(await rollbackLast(id, "you"));
-  } catch (error) { console.error("Rollback failed:", error); res.status(500).json({ error: "Rollback failed" }); }
+    const { id, decisionId } = req.body as { id: number; decisionId: string };
+    res.json(await skipDecision(id, decisionId));
+  } catch (error) { console.error("Skip failed:", error); res.status(500).json({ error: "Skip failed" }); }
 });
 
 apiRouter.post("/review/merge", async (req, res) => {
   try {
     const { id } = req.body as { id: number };
     res.json({ contract: await mergeReview(id) });
-  } catch (error) {
-    console.error("Merge failed:", error);
-    res.status(500).json({ error: "Merge failed" });
-  }
+  } catch (error) { console.error("Merge failed:", error); res.status(400).json({ error: error instanceof Error ? error.message : "Merge failed" }); }
 });
 
 apiRouter.get("/review/active", async (_req, res) => {
-  try {
-    res.json({ review: await getActiveReview() });
-  } catch (error) { console.error("Load active review failed:", error); res.status(500).json({ error: "Failed to load active review" }); }
+  try { res.json({ review: await getActiveReview() }); }
+  catch { res.status(500).json({ error: "Failed to load active review" }); }
 });
 
 apiRouter.get("/audit", async (_req, res) => {
