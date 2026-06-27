@@ -82,8 +82,6 @@ export interface Contract {
   clauses: Clause[];
 }
 
-export type Posture = "aggressive" | "balanced" | "minimal";
-
 export interface RedlineEdit {
   id: string;                      // unique within a strategy, e.g. "e1"
   type: "replace" | "delete" | "insert";
@@ -94,34 +92,49 @@ export interface RedlineEdit {
   justification: string;
 }
 
-export interface RedlineStrategy {
-  posture: Posture;
-  branch: string;
-  edits: RedlineEdit[];
-  summary: string;
-}
-
 export interface AuditEvent {
   id: string;
   kind: "proposed" | "approved" | "rejected" | "rolled_back" | "merged";
   editId?: string;
   clauseHeading?: string;
-  author: string;      // posture name or "human reviewer"
+  author: string;      // department name or "human reviewer"
   approver?: string;
   justification?: string;
   timestamp: number;
 }
 
+export type Department = "legal" | "finance" | "security" | "commercial" | "privacy";
+
+export interface Persona {
+  id: Department;
+  label: string;
+  domain: string;        // what this reviewer redlines (used in the agent prompt + UI)
+  color: string;         // hex, for cards / branches / audit
+  cannedAvailable: boolean;
+}
+
+export interface ClauseProposal {
+  department: Department;
+  edit: RedlineEdit;
+}
+
+export interface ClauseDecision {
+  id: string;                          // stable: "dec-{clauseId}" or "dec-ins-{department}-{editId}"
+  kind: "modify" | "insert";
+  targetClauseId?: string;
+  heading: string;
+  originalText: string | null;         // null for insert
+  proposals: ClauseProposal[];
+  acceptedDepartment: Department | null;
+  decided: boolean;
+}
+
 export interface ReviewState {
-  id: number;                              // timestamp
-  status: "picking" | "gating" | "merged";
-  posture: Posture | null;
-  branch: string | null;                   // review/{id} once picked
+  id: number;
+  status: "merging" | "merged";
   base: Contract;
-  contract: Contract;                      // base ⊕ applied
-  pending: RedlineEdit[];
-  applied: RedlineEdit[];
-  rejected: RedlineEdit[];
+  contract: Contract;                  // base ⊕ accepted
+  decisions: ClauseDecision[];
+  departments: Department[];           // who reviewed
   audit: AuditEvent[];
-  strategies?: RedlineStrategy[];          // present while status === "picking"
 }
