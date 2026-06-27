@@ -11,9 +11,11 @@ export type {
   Clause,
   ContractMeta,
   Contract,
-  Posture,
   RedlineEdit,
-  RedlineStrategy,
   AuditEvent,
   ReviewState,
+  Department,
+  Persona,
+  ClauseProposal,
+  ClauseDecision,
 } from "@shared/types.js";

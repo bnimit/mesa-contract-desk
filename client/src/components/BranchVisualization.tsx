@@ -3,60 +3,43 @@ import type { MesaActivityEvent } from "../types.js";
 
 export type VizPhase = "fork" | "analyze" | "done" | "merge" | "complete";
 
+interface DepartmentDef {
+  id: string;
+  label: string;
+  color: string;
+}
+
 interface BranchVisualizationProps {
   phase: VizPhase;
+  departments: DepartmentDef[]; // 2–4
   events: MesaActivityEvent[];
+  mergeAll?: boolean;
+  // back-compat: ignored by the body, kept so App.tsx (pre-F4) doesn't error
   winnerAgent?: string;
 }
 
 type NodeStatus = "forking" | "active" | "complete" | "error";
 
-interface AgentDef {
-  key: string;
-  label: string;
-  sigil: string;
-  color: string;
+interface BranchDef extends DepartmentDef {
   y: number;
   forkDelay: string;
   path: string;
   mergePath: string;
 }
 
-const AGENTS: AgentDef[] = [
-  {
-    key: "Aggressive",
-    label: "Aggressive",
-    sigil: "▲",
-    color: "var(--color-down)",
-    y: 50,
-    forkDelay: "0.2s",
-    path: "M 68,130 C 180,130 260,50 432,50",
-    mergePath: "M 448,50 C 540,50 600,130 692,130",
-  },
-  {
-    key: "Balanced",
-    label: "Balanced",
-    sigil: "◆",
-    color: "#34d399",
-    y: 130,
-    forkDelay: "0.4s",
-    path: "M 68,130 C 180,130 260,130 432,130",
-    mergePath: "M 448,130 C 540,130 600,130 692,130",
-  },
-  {
-    key: "Minimal",
-    label: "Minimal",
-    sigil: "●",
-    color: "#94a3b8",
-    y: 210,
-    forkDelay: "0.6s",
-    path: "M 68,130 C 180,130 260,210 432,210",
-    mergePath: "M 448,210 C 540,210 600,130 692,130",
-  },
-];
+function computeBranches(departments: DepartmentDef[]): BranchDef[] {
+  const n = departments.length;
+  return departments.map((dept, i) => {
+    const y = n === 1 ? 130 : 40 + i * (180 / Math.max(1, n - 1));
+    const forkDelay = `${0.2 + i * 0.2}s`;
+    const path = `M 68,130 C 180,130 260,${y} 432,${y}`;
+    const mergePath = `M 448,${y} C 540,${y} 600,130 692,130`;
+    return { ...dept, y, forkDelay, path, mergePath };
+  });
+}
 
-function getAgentNodeStatus(
-  agentKey: string,
+function getBranchNodeStatus(
+  label: string,
   phase: VizPhase,
   events: MesaActivityEvent[]
 ): NodeStatus {
@@ -65,13 +48,13 @@ function getAgentNodeStatus(
   const hasError = events.some(
     (e) =>
       e.type === "agent_complete" &&
-      e.agent === agentKey &&
+      e.agent === label &&
       e.detail.toLowerCase().includes("error")
   );
   if (hasError) return "error";
 
   const isComplete = events.some(
-    (e) => e.type === "agent_complete" && e.agent === agentKey
+    (e) => e.type === "agent_complete" && e.agent === label
   );
   if (isComplete) return "complete";
 
@@ -83,21 +66,23 @@ function getAgentNodeStatus(
 
 export function BranchVisualization({
   phase,
+  departments,
   events,
-  winnerAgent,
+  mergeAll = false,
 }: BranchVisualizationProps) {
-  const agentStatuses = useMemo(
+  const branches = useMemo(() => computeBranches(departments), [departments]);
+
+  const branchStatuses = useMemo(
     () =>
-      AGENTS.map((a) => ({
-        ...a,
-        status: getAgentNodeStatus(a.key, phase, events),
+      branches.map((b) => ({
+        ...b,
+        status: getBranchNodeStatus(b.label, phase, events),
       })),
-    [phase, events]
+    [branches, phase, events]
   );
 
   const showMerge = phase === "merge" || phase === "complete";
-  const winner = AGENTS.find((a) => a.key === winnerAgent);
-  const isDismiss = showMerge && !winner;
+  const n = departments.length;
 
   return (
     <div
@@ -108,7 +93,7 @@ export function BranchVisualization({
       }}
     >
       <svg viewBox="0 0 760 260" className="w-full" style={{ overflow: "visible" }}>
-        {/* Main node */}
+        {/* Main node (origin) */}
         <circle
           cx={60}
           cy={130}
@@ -132,48 +117,41 @@ export function BranchVisualization({
         </text>
 
         {/* Branch paths */}
-        {agentStatuses.map((agent) => {
-          const isWinner = winnerAgent === agent.key;
-          const highlightPick = phase === "done" && !!winner;
-          const isLoser = (showMerge && !isDismiss && !isWinner) || (highlightPick && !isWinner);
-          const fadeAll = isDismiss;
-
-          return (
-            <path
-              key={`path-${agent.key}`}
-              d={agent.path}
-              fill="none"
-              stroke={phase === "fork" ? "var(--color-line-2)" : agent.color}
-              strokeWidth={showMerge && isWinner ? 2.5 : 2}
-              strokeLinecap="round"
-              pathLength={1}
-              style={{
-                strokeDasharray: 1,
-                strokeDashoffset: 0,
-                animation: `draw-branch 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) ${agent.forkDelay} both`,
-                opacity: isLoser || fadeAll ? 0.15 : 1,
-                transition: "opacity 0.5s ease, stroke-width 0.3s ease, stroke 0.3s ease",
-              }}
-            />
-          );
-        })}
+        {branchStatuses.map((branch) => (
+          <path
+            key={`path-${branch.id}`}
+            d={branch.path}
+            fill="none"
+            stroke={phase === "fork" ? "var(--color-line-2)" : branch.color}
+            strokeWidth={2}
+            strokeLinecap="round"
+            pathLength={1}
+            style={{
+              strokeDasharray: 1,
+              strokeDashoffset: 0,
+              animation: `draw-branch 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) ${branch.forkDelay} both`,
+              opacity: 1,
+              transition: "opacity 0.5s ease, stroke-width 0.3s ease, stroke 0.3s ease",
+            }}
+          />
+        ))}
 
         {/* Activity dots traveling along paths during analyze phase */}
         {phase === "analyze" &&
-          agentStatuses
-            .filter((a) => a.status === "active")
-            .map((agent) => (
+          branchStatuses
+            .filter((b) => b.status === "active")
+            .map((branch) => (
               <circle
-                key={`dot-${agent.key}`}
+                key={`dot-${branch.id}`}
                 r={3.5}
-                fill={agent.color}
+                fill={branch.color}
                 opacity={0.45}
               >
                 <animateMotion
                   dur="2s"
                   repeatCount="indefinite"
-                  begin={agent.forkDelay}
-                  path={agent.path}
+                  begin={branch.forkDelay}
+                  path={branch.path}
                 />
                 <animate
                   attributeName="opacity"
@@ -181,65 +159,45 @@ export function BranchVisualization({
                   keyTimes="0;0.1;0.85;1"
                   dur="2s"
                   repeatCount="indefinite"
-                  begin={agent.forkDelay}
+                  begin={branch.forkDelay}
                 />
               </circle>
             ))}
 
-        {/* Agent nodes */}
-        {agentStatuses.map((agent) => {
-          const isWinner = winnerAgent === agent.key;
-          const highlightPick = phase === "done" && !!winner;
-          const isLoser = (showMerge && !isDismiss && !isWinner) || (highlightPick && !isWinner);
-          const fadeAll = isDismiss;
-          const nodeDelay = `${parseFloat(agent.forkDelay) + 0.5}s`;
-
+        {/* Branch nodes + labels */}
+        {branchStatuses.map((branch) => {
+          const nodeDelay = `${parseFloat(branch.forkDelay) + 0.5}s`;
           const isFilled =
-            agent.status === "complete" || phase === "done" || showMerge;
+            branch.status === "complete" || phase === "done" || showMerge;
 
           let nodeAnimation = `node-enter 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) ${nodeDelay} both`;
-          if (agent.status === "active") {
+          if (branch.status === "active") {
             nodeAnimation = "node-pulse 1.4s ease-in-out infinite";
-          } else if (agent.status === "complete" && phase === "analyze") {
+          } else if (branch.status === "complete" && phase === "analyze") {
             nodeAnimation = "node-complete-pop 0.35s ease-out both";
           }
 
           return (
-            <g key={`node-${agent.key}`}>
+            <g key={`node-${branch.id}`}>
               <circle
                 cx={440}
-                cy={agent.y}
+                cy={branch.y}
                 r={8}
-                fill={isFilled ? agent.color : "none"}
-                stroke={agent.color}
+                fill={isFilled ? branch.color : "none"}
+                stroke={branch.color}
                 strokeWidth={2}
                 style={{
-                  transformOrigin: `440px ${agent.y}px`,
+                  transformOrigin: `440px ${branch.y}px`,
                   animation: nodeAnimation,
-                  opacity: isLoser || fadeAll ? 0.15 : 1,
                   transition: "opacity 0.5s ease, fill 0.3s ease",
                 }}
               />
 
-              {/* Agent sigil + label */}
+              {/* Label */}
               <text
                 x={458}
-                y={agent.y - 8}
-                fill={isLoser || fadeAll ? "#7fb8a4" : agent.color}
-                fontFamily="var(--font-mono)"
-                fontSize={11}
-                fontWeight={600}
-                style={{
-                  animation: `fade-in 0.3s ${nodeDelay} both`,
-                  transition: "fill 0.5s ease",
-                }}
-              >
-                {agent.sigil}
-              </text>
-              <text
-                x={458}
-                y={agent.y + 6}
-                fill={isLoser || fadeAll ? "#7fb8a4" : "#cbd5e1"}
+                y={branch.y + 4}
+                fill="#cbd5e1"
                 fontFamily="var(--font-mono)"
                 fontSize={11}
                 style={{
@@ -247,14 +205,14 @@ export function BranchVisualization({
                   transition: "fill 0.5s ease",
                 }}
               >
-                {agent.label}
+                {branch.label}
               </text>
 
               {/* Status text */}
-              {agent.status === "complete" && !showMerge && (
+              {branch.status === "complete" && !showMerge && (
                 <text
                   x={458}
-                  y={agent.y + 20}
+                  y={branch.y + 20}
                   fill="var(--color-up)"
                   fontFamily="var(--font-mono)"
                   fontSize={9}
@@ -263,10 +221,10 @@ export function BranchVisualization({
                   complete
                 </text>
               )}
-              {agent.status === "error" && (
+              {branch.status === "error" && (
                 <text
                   x={458}
-                  y={agent.y + 20}
+                  y={branch.y + 20}
                   fill="var(--color-down)"
                   fontFamily="var(--font-mono)"
                   fontSize={9}
@@ -279,29 +237,29 @@ export function BranchVisualization({
           );
         })}
 
-        {/* Merge path + merged node */}
-        {showMerge && !isDismiss && winner && (
+        {/* Merge paths: mergeAll draws ALL branches into main node */}
+        {showMerge && mergeAll && (
           <>
-            <path
-              d={winner.mergePath}
-              fill="none"
-              stroke="#34d399"
-              strokeWidth={2.5}
-              strokeLinecap="round"
-              pathLength={1}
-              style={{
-                strokeDasharray: 1,
-                strokeDashoffset: 0,
-                animation:
-                  "draw-branch 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s both",
-              }}
-            />
+            {branchStatuses.map((branch, i) => (
+              <path
+                key={`merge-${branch.id}`}
+                d={branch.mergePath}
+                fill="none"
+                stroke={branch.color}
+                strokeWidth={2}
+                strokeLinecap="round"
+                pathLength={1}
+                style={{
+                  strokeDasharray: 1,
+                  strokeDashoffset: 0,
+                  animation: `draw-branch 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) ${0.1 + i * 0.1}s both`,
+                }}
+              />
+            ))}
             <g
               style={{
                 animation:
-                  phase === "complete"
-                    ? "merge-glow 1s ease-out both"
-                    : undefined,
+                  phase === "complete" ? "merge-glow 1s ease-out both" : undefined,
               }}
             >
               <circle
@@ -331,16 +289,16 @@ export function BranchVisualization({
         )}
       </svg>
 
-      {/* Phase description */}
+      {/* Phase captions */}
       <div className="text-center mt-4 [&_p]:!text-[#7fb8a4]">
         {phase === "fork" && (
           <p className="section-label fade-in">
-            Forking contract to three attorney branches…
+            Forking contract to {n} reviewer{n !== 1 ? "s" : ""}…
           </p>
         )}
         {phase === "analyze" && (
           <p className="section-label fade-in">
-            Attorneys reviewing contract and proposing redlines
+            Reviewers analyzing contract and proposing redlines
             <span className="dot-1 ml-1">·</span>
             <span className="dot-2">·</span>
             <span className="dot-3">·</span>
@@ -348,17 +306,12 @@ export function BranchVisualization({
         )}
         {phase === "done" && (
           <p className="section-label fade-in">
-            {winner ? `Reviewing ${winner.label} redlines — approve each clause below` : "All branches ready — choose a strategy to merge"}
+            All branches ready — review clause proposals below
           </p>
         )}
-        {phase === "merge" && !isDismiss && (
+        {phase === "merge" && mergeAll && (
           <p className="section-label fade-in text-mesa">
-            Merging {winnerAgent} to main…
-          </p>
-        )}
-        {phase === "merge" && isDismiss && (
-          <p className="section-label fade-in text-mute">
-            Discarding all branches…
+            merging to v2
           </p>
         )}
         {phase === "complete" && (
