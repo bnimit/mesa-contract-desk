@@ -10,15 +10,32 @@ import type {
   Department,
 } from "../types.js";
 
+/**
+ * GET JSON with a few retries. Tolerates the dev server still booting — in
+ * `npm run dev`, Vite starts instantly but the API takes a few seconds to come
+ * up, so the page's initial calls would otherwise fail with ECONNREFUSED and
+ * leave the UI empty until a manual refresh. This self-heals that window.
+ */
+async function getJson<T = any>(url: string, tries = 6): Promise<T> {
+  for (let i = 0; i < tries; i++) {
+    try {
+      const r = await fetch(url);
+      if (r.ok) return (await r.json()) as T;
+    } catch { /* server may still be starting */ }
+    if (i < tries - 1) await new Promise((res) => setTimeout(res, 700));
+  }
+  throw new Error(`Failed to load ${url}`);
+}
+
 export function usePersonas() {
   const [personas, setPersonas] = useState<Persona[]>([]);
-  useEffect(() => { fetch("/api/personas").then((r) => r.json()).then((d) => setPersonas(d.personas ?? [])).catch(() => {}); }, []);
+  useEffect(() => { getJson("/api/personas").then((d) => setPersonas(d.personas ?? [])).catch(() => {}); }, []);
   return { personas };
 }
 
 export function useSamples() {
   const [samples, setSamples] = useState<{ id: string; title: string; cannedAvailable: boolean }[]>([]);
-  useEffect(() => { fetch("/api/samples").then((r) => r.json()).then((d) => setSamples(d.samples ?? [])).catch(() => {}); }, []);
+  useEffect(() => { getJson("/api/samples").then((d) => setSamples(d.samples ?? [])).catch(() => {}); }, []);
   return { samples };
 }
 
@@ -27,7 +44,7 @@ export function useContract(refreshKey?: unknown) {
   const [loading, setLoading] = useState(true);
   const refresh = useCallback(async () => {
     setLoading(true);
-    try { setContract(await (await fetch("/api/contract")).json()); }
+    try { setContract(await getJson("/api/contract")); }
     catch { /* */ } finally { setLoading(false); }
   }, []);
   const loadSample = useCallback(async (id: string) => {
@@ -53,7 +70,7 @@ export function useReview(onChange?: () => void) {
   const [review, setReview] = useState<ReviewState | null>(null);
   const [busy, setBusy] = useState(false);
   const refreshActive = useCallback(async () => {
-    try { const d = await (await fetch("/api/review/active")).json(); setReview(d.review); } catch { /* */ }
+    try { const d = await getJson("/api/review/active"); setReview(d.review); } catch { /* */ }
   }, []);
   useEffect(() => { refreshActive(); }, [refreshActive]);
   const post = useCallback(async (path: string, body: object) => {
@@ -73,8 +90,7 @@ export function useAuditTrail(refreshKey: unknown) {
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch("/api/audit");
-      const data = await res.json();
+      const data = await getJson("/api/audit");
       setEvents(data.events ?? []);
     } catch { console.error("Failed to fetch audit"); }
   }, []);
@@ -91,8 +107,7 @@ export function useSettings() {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/settings");
-      const data = await res.json();
+      const data = await getJson("/api/settings");
       setBackends(data.backends ?? []);
       setMesaInfo(data.mesaInfo);
       setKeys(data.keys ?? { mesa: false, anthropic: false });
