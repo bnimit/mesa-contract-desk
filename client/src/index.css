@@ -49,6 +49,15 @@ body {
   color: #ffffff;
 }
 
+/* Tailwind v4 sets buttons to cursor:default; restore the pointer on
+   anything interactive so selection cards/buttons feel clickable. */
+button:not(:disabled),
+[role="button"]:not(:disabled),
+label[for],
+summary {
+  cursor: pointer;
+}
+
 .tabular {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
