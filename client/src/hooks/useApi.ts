@@ -4,100 +4,62 @@ import type {
   WebhookTarget,
   RepoTags,
   Contract,
-  RedlineStrategy,
   ReviewState,
   AuditEvent,
-  Posture,
+  Persona,
+  Department,
 } from "../types.js";
+
+export function usePersonas() {
+  const [personas, setPersonas] = useState<Persona[]>([]);
+  useEffect(() => { fetch("/api/personas").then((r) => r.json()).then((d) => setPersonas(d.personas ?? [])).catch(() => {}); }, []);
+  return { personas };
+}
+
+export function useSamples() {
+  const [samples, setSamples] = useState<{ id: string; title: string }[]>([]);
+  useEffect(() => { fetch("/api/samples").then((r) => r.json()).then((d) => setSamples(d.samples ?? [])).catch(() => {}); }, []);
+  return { samples };
+}
 
 export function useContract(refreshKey?: unknown) {
   const [contract, setContract] = useState<Contract | null>(null);
   const [loading, setLoading] = useState(true);
   const refresh = useCallback(async () => {
     setLoading(true);
-    try {
-      const res = await fetch("/api/contract");
-      setContract(await res.json());
-    } catch { console.error("Failed to fetch contract"); }
-    finally { setLoading(false); }
+    try { setContract(await (await fetch("/api/contract")).json()); }
+    catch { /* */ } finally { setLoading(false); }
+  }, []);
+  const loadSample = useCallback(async (id: string) => {
+    const r = await fetch("/api/contract/sample", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    const d = await r.json(); if (r.ok) setContract(d.contract); return d;
+  }, []);
+  const uploadFile = useCallback(async (file: File) => {
+    const fd = new FormData(); fd.append("file", file);
+    const r = await fetch("/api/contract/upload", { method: "POST", body: fd });
+    const d = await r.json(); if (r.ok) setContract(d.contract); return r.ok ? { ok: true, contract: d.contract } : { ok: false, error: d.error };
   }, []);
   useEffect(() => { refresh(); }, [refresh, refreshKey]);
-  return { contract, loading, refresh };
+  return { contract, loading, refresh, loadSample, uploadFile };
 }
 
 export function useReview(onChange?: () => void) {
   const [review, setReview] = useState<ReviewState | null>(null);
-  const [strategies, setStrategies] = useState<RedlineStrategy[]>([]);
-  const [reviewId, setReviewId] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
-
   const refreshActive = useCallback(async () => {
-    try {
-      const res = await fetch("/api/review/active");
-      const data = await res.json();
-      const r: ReviewState | null = data.review;
-      setReview(r);
-      if (r) {
-        setReviewId(r.id);
-        if (r.status === "picking" && r.strategies) setStrategies(r.strategies);
-      }
-    } catch {
-      console.error("Failed to fetch active review");
-    }
+    try { const d = await (await fetch("/api/review/active")).json(); setReview(d.review); } catch { /* */ }
   }, []);
-
   useEffect(() => { refreshActive(); }, [refreshActive]);
-
-  const start = useCallback(async () => {
-    setBusy(true);
-    try {
-      const res = await fetch("/api/review/start", { method: "POST" });
-      const data = await res.json();
-      setReviewId(data.id);
-      setStrategies(data.strategies);
-      await refreshActive();
-    } finally { setBusy(false); }
-  }, [refreshActive]);
-
   const post = useCallback(async (path: string, body: object) => {
     setBusy(true);
-    try {
-      const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      const data = await res.json();
-      onChange?.();
-      return data;
-    } finally { setBusy(false); }
+    try { const d = await (await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json(); onChange?.(); return d; }
+    finally { setBusy(false); }
   }, [onChange]);
-
-  const pick = useCallback(async (posture: Posture) => {
-    const id = reviewId; if (!id) return;
-    const state = await post("/api/review/pick", { id, posture });
-    setReview(state);
-  }, [reviewId, post]);
-
-  const approve = useCallback(async () => { const id = reviewId; if (!id) return; setReview(await post("/api/review/approve", { id })); }, [reviewId, post]);
-  const reject = useCallback(async () => { const id = reviewId; if (!id) return; setReview(await post("/api/review/reject", { id })); }, [reviewId, post]);
-  const rollback = useCallback(async () => { const id = reviewId; if (!id) return; setReview(await post("/api/review/rollback", { id })); }, [reviewId, post]);
-  const merge = useCallback(async () => {
-    const id = reviewId;
-    if (!id) return;
-    setBusy(true);
-    try {
-      await fetch("/api/review/merge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      });
-    } finally {
-      setBusy(false);
-    }
-    setReview(null);
-    setStrategies([]);
-    setReviewId(null);
-    onChange?.();
-  }, [reviewId, onChange]);
-
-  return { review, strategies, reviewId, busy, start, pick, approve, reject, rollback, merge, refreshActive };
+  const start = useCallback(async (departments: Department[]) => { setBusy(true); try { const r = await fetch("/api/review/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ departments }) }); const d = await r.json(); if (r.ok) setReview(d); onChange?.(); return d; } finally { setBusy(false); } }, [onChange]);
+  const accept = useCallback(async (decisionId: string, department: Department) => { if (!review) return; setReview(await post("/api/review/accept", { id: review.id, decisionId, department })); }, [review, post]);
+  const skip = useCallback(async (decisionId: string) => { if (!review) return; setReview(await post("/api/review/skip", { id: review.id, decisionId })); }, [review, post]);
+  const merge = useCallback(async () => { if (!review) return; await post("/api/review/merge", { id: review.id }); setReview(null); onChange?.(); }, [review, post, onChange]);
+  return { review, busy, start, accept, skip, merge, refreshActive };
 }
 
 export function useAuditTrail(refreshKey: unknown) {
