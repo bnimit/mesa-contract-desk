@@ -47,7 +47,7 @@ export function IntakePanel({ personas, contractTitle, samples, onUpload, onLoad
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {personas.map((p) => {
             const on = selected.includes(p.id);
-            const locked = !p.cannedAvailable && !hasKey && !on;
+            const locked = (!p.cannedAvailable && !hasKey && !on) || (selected.length >= 4 && !on);
             return (
               <button key={p.id} disabled={locked} onClick={() => onToggle(p.id)}
                 className={`flex items-start gap-3 p-3 rounded-xl border text-left transition-colors ${on ? "border-ink bg-ink/[0.03]" : "border-line hover:border-ink/30"} ${locked ? "opacity-40 cursor-not-allowed" : ""}`}>
