@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { rm } from "fs/promises";
 import { resolve } from "path";
 import { getMesa } from "./mesa.js";
-import { seedContract, getContract, startReview, pickStrategy, getActiveReview } from "./review.js";
+import { seedContract, getContract, setContract, startReview, getActiveReview } from "./review.js";
 
 async function resetRepo() {
   await rm(resolve("mesa-repo"), { recursive: true, force: true });
@@ -10,7 +10,7 @@ async function resetRepo() {
   await seedContract();
 }
 
-describe("review start & pick (local-fs)", () => {
+describe("review start & active (local-fs)", () => {
   beforeEach(resetRepo);
 
   it("seeds the contract on main", async () => {
@@ -19,41 +19,27 @@ describe("review start & pick (local-fs)", () => {
     expect(c.meta.title).toContain("Master Services Agreement");
   });
 
-  it("startReview returns three strategies with edits", async () => {
-    const strategies = await startReview(1000);
-    expect(strategies.map((s) => s.posture).sort()).toEqual(["aggressive", "balanced", "minimal"]);
-    for (const s of strategies) {
-      expect(s.edits.length).toBeGreaterThan(0);
-      expect(s.summary).toMatch(/change/i);
-    }
+  it("setContract persists a modified contract", async () => {
+    const c = await getContract();
+    const modified = { ...c, meta: { ...c.meta, title: "Modified Agreement" } };
+    await setContract(modified);
+    const loaded = await getContract();
+    expect(loaded.meta.title).toBe("Modified Agreement");
   });
 
-  it("pickStrategy seeds a review branch with pending = chosen edits, applied = []", async () => {
-    const strategies = await startReview(2000);
-    const chosen = strategies.find((s) => s.posture === "balanced")!;
-    const state = await pickStrategy(2000, "balanced");
-    expect(state.status).toBe("gating");
-    expect(state.posture).toBe("balanced");
-    expect(state.pending).toEqual(chosen.edits);
-    expect(state.applied).toEqual([]);
-    // base ⊕ applied with empty applied === base
-    expect(state.contract.clauses.length).toBe(state.base.clauses.length);
+  it("startReview returns status merging with decisions", async () => {
+    const state = await startReview(1000, ["legal", "finance", "security"]);
+    expect(state.status).toBe("merging");
+    expect(state.decisions.length).toBeGreaterThan(0);
+    expect(state.departments).toEqual(["legal", "finance", "security"]);
   });
 
-  it("getActiveReview rehydrates after pick", async () => {
-    await startReview(3000);
-    await pickStrategy(3000, "aggressive");
+  it("getActiveReview rehydrates after startReview", async () => {
+    await startReview(2000, ["legal", "finance", "security"]);
     const active = await getActiveReview();
     expect(active).not.toBeNull();
-    expect(active!.id).toBe(3000);
-    expect(active!.status).toBe("gating");
-    expect(active!.posture).toBe("aggressive");
-  });
-
-  it("getActiveReview returns picking state before a pick", async () => {
-    await startReview(4000);
-    const active = await getActiveReview();
-    expect(active!.status).toBe("picking");
-    expect(active!.strategies).toHaveLength(3);
+    expect(active!.id).toBe(2000);
+    expect(active!.status).toBe("merging");
+    expect(active!.decisions.length).toBeGreaterThan(0);
   });
 });

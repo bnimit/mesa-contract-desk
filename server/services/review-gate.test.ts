@@ -2,81 +2,40 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { rm } from "fs/promises";
 import { resolve } from "path";
 import { getMesa } from "./mesa.js";
-import {
-  seedContract, getContract, startReview, pickStrategy,
-  approveNext, rejectNext, rollbackLast, mergeReview, getActiveReview, getAuditTrail,
-} from "./review.js";
+import { seedContract, startReview, acceptEdit, skipDecision, mergeReview, getActiveReview } from "./review.js";
 
-async function resetRepo() {
-  await rm(resolve("mesa-repo"), { recursive: true, force: true });
-  await getMesa().init();
-  await seedContract();
-}
+async function reset() { await rm(resolve("mesa-repo"), { recursive: true, force: true }); await getMesa().init(); await seedContract(); }
 
-async function setupGate(id: number) {
-  await startReview(id);
-  return pickStrategy(id, "minimal"); // minimal = 2 edits
-}
-
-describe("approval gate (local-fs)", () => {
-  beforeEach(resetRepo);
-
-  it("approve applies the next edit and pops the queue", async () => {
-    const before = await setupGate(1000);
-    const pendingCount = before.pending.length;
-    const after = await approveNext(1000, "you");
-    expect(after.applied).toHaveLength(1);
-    expect(after.pending).toHaveLength(pendingCount - 1);
-    expect(after.audit.some((a) => a.kind === "approved")).toBe(true);
+describe("cherry-pick gate (local-fs)", () => {
+  beforeEach(reset);
+  it("liability decision has two proposals (legal + finance)", async () => {
+    const s = await startReview(1000, ["legal", "finance", "security"]);
+    const liab = s.decisions.find((d) => d.targetClauseId === "liability")!;
+    expect(liab.proposals.map((p) => p.department).sort()).toEqual(["finance", "legal"]);
   });
-
-  it("reject pops the queue without applying", async () => {
-    await setupGate(1100);
-    const after = await rejectNext(1100, "you");
-    expect(after.applied).toHaveLength(0);
-    expect(after.rejected).toHaveLength(1);
-    expect(after.audit.some((a) => a.kind === "rejected")).toBe(true);
+  it("accept picks a department's edit; contract reflects it", async () => {
+    await startReview(1100, ["legal", "finance", "security"]);
+    const s = await acceptEdit(1100, "dec-liability", "finance");
+    const liab = s.decisions.find((d) => d.id === "dec-liability")!;
+    expect(liab.acceptedDepartment).toBe("finance");
+    expect(s.contract.clauses.find((c) => c.id === "liability")!.text).toContain("three (3) months");
   });
-
-  it("approving all then merging updates main and strips working files", async () => {
-    const start = await setupGate(1200);
-    for (let i = 0; i < start.pending.length; i++) await approveNext(1200, "you");
-    const active = await getActiveReview();
-    expect(active!.pending).toHaveLength(0);
-
+  it("merge is blocked until every decision is decided, then applies accepted edits", async () => {
+    const s = await startReview(1200, ["legal", "finance", "security"]);
+    await expect(mergeReview(1200)).rejects.toThrow(/decided/);
+    for (const d of s.decisions) {
+      if (d.id === "dec-liability") await acceptEdit(1200, d.id, "legal");
+      else await acceptEdit(1200, d.id, d.proposals[0].department);
+    }
     const merged = await mergeReview(1200);
     expect(merged.meta.version).toBe(2);
-    expect(merged.meta.lastApproved).not.toBeNull();
-
-    // main has the new contract, no working files
-    const mainFiles = await getMesa().listFiles("main", "");
-    expect(mainFiles).not.toContain("pending.json");
-    expect(mainFiles).not.toContain("applied.json");
-    expect(mainFiles).not.toContain("rejected.json");
-    expect(mainFiles).not.toContain("audit.json");
-
-    // active review cleared
-    expect(await getActiveReview()).toBeNull();
   });
-
-  it("rollback removes the last applied edit and recomputes", async () => {
-    const start = await setupGate(1300);
-    await approveNext(1300, "you");
-    await approveNext(1300, "you");
-    const twoApplied = await getActiveReview();
-    expect(twoApplied!.applied).toHaveLength(2);
-
-    const after = await rollbackLast(1300, "you");
-    expect(after.applied).toHaveLength(1);
-    expect(after.audit.some((a) => a.kind === "rolled_back")).toBe(true);
-  });
-
-  it("audit trail accumulates across a merged review", async () => {
-    const start = await setupGate(1400);
-    for (let i = 0; i < start.pending.length; i++) await approveNext(1400, "you");
-    await mergeReview(1400);
-    const trail = await getAuditTrail();
-    expect(trail.some((a) => a.kind === "merged")).toBe(true);
-    expect(trail.some((a) => a.kind === "approved")).toBe(true);
+  it("skip keeps original; getActiveReview rehydrates decisions", async () => {
+    await startReview(1300, ["legal", "finance", "security"]);
+    await skipDecision(1300, "dec-liability");
+    const active = await getActiveReview();
+    const liab = active!.decisions.find((d) => d.id === "dec-liability")!;
+    expect(liab.decided).toBe(true);
+    expect(liab.acceptedDepartment).toBeNull();
   });
 });
