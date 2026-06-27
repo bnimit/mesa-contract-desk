@@ -33,13 +33,17 @@ export function useReview(onChange?: () => void) {
   const [busy, setBusy] = useState(false);
 
   const refreshActive = useCallback(async () => {
-    const res = await fetch("/api/review/active");
-    const data = await res.json();
-    const r: ReviewState | null = data.review;
-    setReview(r);
-    if (r) {
-      setReviewId(r.id);
-      if (r.status === "picking" && r.strategies) setStrategies(r.strategies);
+    try {
+      const res = await fetch("/api/review/active");
+      const data = await res.json();
+      const r: ReviewState | null = data.review;
+      setReview(r);
+      if (r) {
+        setReviewId(r.id);
+        if (r.status === "picking" && r.strategies) setStrategies(r.strategies);
+      }
+    } catch {
+      console.error("Failed to fetch active review");
     }
   }, []);
 
@@ -76,11 +80,23 @@ export function useReview(onChange?: () => void) {
   const reject = useCallback(async () => { const id = reviewId; if (!id) return; setReview(await post("/api/review/reject", { id })); }, [reviewId, post]);
   const rollback = useCallback(async () => { const id = reviewId; if (!id) return; setReview(await post("/api/review/rollback", { id })); }, [reviewId, post]);
   const merge = useCallback(async () => {
-    const id = reviewId; if (!id) return;
-    await post("/api/review/merge", { id });
-    setReview(null); setStrategies([]); setReviewId(null);
+    const id = reviewId;
+    if (!id) return;
+    setBusy(true);
+    try {
+      await fetch("/api/review/merge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+    } finally {
+      setBusy(false);
+    }
+    setReview(null);
+    setStrategies([]);
+    setReviewId(null);
     onChange?.();
-  }, [reviewId, post, onChange]);
+  }, [reviewId, onChange]);
 
   return { review, strategies, reviewId, busy, start, pick, approve, reject, rollback, merge, refreshActive };
 }
