@@ -37,7 +37,7 @@ export function ApprovalGate({
             {current.type === "replace" ? "REVISE" : current.type.toUpperCase()} · {current.heading ?? current.targetClauseId}
           </div>
           {clauseBefore(review, current) && (
-            <div className="diff-deleted px-3 py-2 text-sm text-ink-2 line-through/0 mb-2 font-serif">
+            <div className="diff-deleted px-3 py-2 text-sm text-ink-2 line-through mb-2 font-serif">
               {clauseBefore(review, current)}
             </div>
           )}
