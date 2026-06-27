@@ -52,6 +52,8 @@ describe("approval gate (local-fs)", () => {
     const mainFiles = await getMesa().listFiles("main", "");
     expect(mainFiles).not.toContain("pending.json");
     expect(mainFiles).not.toContain("applied.json");
+    expect(mainFiles).not.toContain("rejected.json");
+    expect(mainFiles).not.toContain("audit.json");
 
     // active review cleared
     expect(await getActiveReview()).toBeNull();

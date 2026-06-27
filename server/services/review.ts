@@ -3,12 +3,13 @@ import { applyEdits, editSummary } from "./contract-engine.js";
 import { SAMPLE_CONTRACT } from "../data/sample-contract.js";
 import { runRedlineAgent, POSTURES } from "../agents/redline.js";
 import { emitActivity } from "../routes/events.js";
-import type { Contract, RedlineStrategy, ReviewState, Posture, AuditEvent } from "../../shared/types.js";
+import type { Contract, RedlineEdit, RedlineStrategy, ReviewState, Posture, AuditEvent } from "../../shared/types.js";
 
 const MAIN = "main";
 const CONTRACT_FILE = "contract.json";
 const ACTIVE_FILE = "active-review.json";
 const AUDIT_LOG_FILE = "audit-log.json"; // accumulated, on main
+const AUDIT_WORK_FILE = "audit.json"; // per-review working audit, on the review branch
 
 export const reviewBranch = (id: number) => `review/${id}`;
 export const postureBranch = (id: number, p: Posture) => `review/${id}/${p}`;
@@ -128,7 +129,7 @@ export async function getActiveReview(): Promise<ReviewState | null> {
   const pending = await readJson(branch, "pending.json", []);
   const applied = await readJson(branch, "applied.json", []);
   const rejected = await readJson(branch, "rejected.json", []);
-  const audit = await readJson<AuditEvent[]>(branch, "audit.json", []);
+  const audit = await readJson<AuditEvent[]>(branch, AUDIT_WORK_FILE, []);
   return {
     id: ptr.id, status: "gating", posture: ptr.posture, branch,
     base, contract: applyEdits(base, applied),
@@ -138,14 +139,12 @@ export async function getActiveReview(): Promise<ReviewState | null> {
 
 // ── Task 5: Approval Gate Operations ─────────────────────────────────────────
 
-const AUDIT_WORK_FILE = "audit.json";
-
 async function loadGate(id: number) {
   const branch = reviewBranch(id);
   const base = await readJson<Contract>(branch, CONTRACT_FILE, await getContract());
-  const pending = await readJson<import("../../shared/types.js").RedlineEdit[]>(branch, "pending.json", []);
-  const applied = await readJson<import("../../shared/types.js").RedlineEdit[]>(branch, "applied.json", []);
-  const rejected = await readJson<import("../../shared/types.js").RedlineEdit[]>(branch, "rejected.json", []);
+  const pending = await readJson<RedlineEdit[]>(branch, "pending.json", []);
+  const applied = await readJson<RedlineEdit[]>(branch, "applied.json", []);
+  const rejected = await readJson<RedlineEdit[]>(branch, "rejected.json", []);
   const audit = await readJson<AuditEvent[]>(branch, AUDIT_WORK_FILE, []);
   return { branch, base, pending, applied, rejected, audit };
 }
@@ -153,9 +152,9 @@ async function loadGate(id: number) {
 async function saveGate(
   branch: string,
   base: Contract,
-  pending: import("../../shared/types.js").RedlineEdit[],
-  applied: import("../../shared/types.js").RedlineEdit[],
-  rejected: import("../../shared/types.js").RedlineEdit[],
+  pending: RedlineEdit[],
+  applied: RedlineEdit[],
+  rejected: RedlineEdit[],
   audit: AuditEvent[]
 ): Promise<ReviewState> {
   const contract = applyEdits(base, applied);
