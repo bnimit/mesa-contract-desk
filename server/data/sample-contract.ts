@@ -1,4 +1,4 @@
-import type { Contract, RedlineEdit, Posture } from "../../shared/types.js";
+import type { Contract, RedlineEdit, Department } from "../../shared/types.js";
 
 export const SAMPLE_CONTRACT: Contract = {
   meta: {
@@ -20,23 +20,23 @@ export const SAMPLE_CONTRACT: Contract = {
 };
 
 // Canned redlines used when no Anthropic key is configured, so the full
-// workflow is clickable offline. Each posture takes a distinct stance.
-export const CANNED_REDLINES: Record<Posture, RedlineEdit[]> = {
-  aggressive: [
-    { id: "e1", type: "replace", targetClauseId: "liability", heading: "4. Limitation of Liability", proposedText: "Each party's aggregate liability is capped at the fees paid by Customer in the three (3) months preceding the claim. Neither party is liable for indirect, incidental, or consequential damages.", justification: "Unlimited liability is unacceptable; cap at 3 months' fees and exclude consequential damages." },
-    { id: "e2", type: "replace", targetClauseId: "indemnity", heading: "5. Indemnification", proposedText: "Each party will indemnify the other for third-party claims arising from its own breach or negligence. Provider will indemnify Customer against IP infringement claims relating to the platform.", justification: "One-sided indemnity flipped to mutual; IP infringement risk shifted to Provider." },
-    { id: "e3", type: "replace", targetClauseId: "data", heading: "6. Data & IP Ownership", proposedText: "Customer owns all data it submits and all derivatives. Provider may process the data solely to provide the services and may not use it for any other purpose.", justification: "Customer must own its data; strike Provider's broad reuse rights." },
-    { id: "e4", type: "replace", targetClauseId: "term", heading: "3. Term & Renewal", proposedText: "This Agreement runs for twelve (12) months and does not auto-renew. Renewal requires written agreement of both parties.", justification: "Remove auto-renewal entirely." },
-    { id: "e5", type: "replace", targetClauseId: "fees", heading: "2. Fees & Payment", proposedText: "Customer will pay undisputed fees within forty-five (45) days of invoice. Late amounts accrue interest at 0.5% per month.", justification: "Extend payment window and reduce penalty interest." },
+// workflow is clickable offline. Keyed by department, with each department's
+// edits scoped to their domain. Legal and Finance both propose different edits
+// for the contested "liability" clause.
+export const CANNED_REDLINES: Record<"legal" | "finance" | "security", RedlineEdit[]> = {
+  legal: [
+    { id: "le1", type: "replace", targetClauseId: "liability", heading: "4. Limitation of Liability", proposedText: "Each party's aggregate liability is capped at the fees paid in the prior twelve (12) months, except for breaches of confidentiality or indemnification obligations.", justification: "Mutual cap with standard carve-outs for confidentiality and indemnity." },
+    { id: "le2", type: "replace", targetClauseId: "indemnity", heading: "5. Indemnification", proposedText: "Each party will indemnify the other for third-party claims arising from its breach. Provider will indemnify Customer against IP-infringement claims relating to the platform.", justification: "Make indemnity mutual and shift platform IP risk to Provider." },
+    { id: "le3", type: "replace", targetClauseId: "law", heading: "8. Governing Law", proposedText: "This Agreement is governed by the laws of the State of Delaware, without regard to conflict-of-laws principles.", justification: "Neutral, well-trodden governing law." },
   ],
-  balanced: [
-    { id: "e1", type: "replace", targetClauseId: "liability", heading: "4. Limitation of Liability", proposedText: "Each party's aggregate liability is capped at the total fees paid in the twelve (12) months preceding the claim, except for breaches of confidentiality or indemnification obligations.", justification: "Mutual 12-month cap with standard carve-outs — market standard." },
-    { id: "e2", type: "replace", targetClauseId: "indemnity", heading: "5. Indemnification", proposedText: "Each party will indemnify the other for third-party claims caused by its breach of this Agreement. Provider will indemnify Customer for IP infringement by the platform.", justification: "Make indemnity mutual and tie it to breach." },
-    { id: "e3", type: "replace", targetClauseId: "data", heading: "6. Data & IP Ownership", proposedText: "Customer retains ownership of its data. Provider may use aggregated, de-identified data to improve the services.", justification: "Customer owns data; Provider keeps narrow de-identified improvement rights." },
-    { id: "e4", type: "insert", afterClauseId: "confidentiality", heading: "7a. Data Security", proposedText: "Provider will maintain administrative, technical, and physical safeguards aligned with SOC 2 Type II and will notify Customer of any data breach within seventy-two (72) hours.", justification: "Add a baseline security and breach-notice obligation." },
+  finance: [
+    { id: "fi1", type: "replace", targetClauseId: "liability", heading: "4. Limitation of Liability", proposedText: "Neither party's aggregate liability will exceed the total fees paid by Customer in the three (3) months preceding the claim; neither party is liable for indirect or consequential damages.", justification: "Tie the cap to recent spend and exclude consequential damages." },
+    { id: "fi2", type: "replace", targetClauseId: "fees", heading: "2. Fees & Payment", proposedText: "Customer will pay undisputed fees within forty-five (45) days of invoice. Late amounts accrue interest at 0.5% per month.", justification: "Extend the payment window and reduce penalty interest." },
+    { id: "fi3", type: "replace", targetClauseId: "term", heading: "3. Term & Renewal", proposedText: "This Agreement runs for twelve (12) months and does not auto-renew; renewal requires written agreement of both parties.", justification: "Remove auto-renewal to control spend." },
   ],
-  minimal: [
-    { id: "e1", type: "replace", targetClauseId: "liability", heading: "4. Limitation of Liability", proposedText: "Each party's aggregate liability is capped at the total fees paid in the twelve (12) months preceding the claim.", justification: "Add a simple mutual liability cap; leave the rest as-is." },
-    { id: "e2", type: "replace", targetClauseId: "term", heading: "3. Term & Renewal", proposedText: "This Agreement begins on the Effective Date and continues for twelve (12) months. It automatically renews for successive twelve (12) month terms unless either party gives notice of non-renewal at least thirty (30) days before the end of the then-current term.", justification: "Shorten the non-renewal notice from 90 to 30 days." },
+  security: [
+    { id: "se1", type: "replace", targetClauseId: "data", heading: "6. Data & IP Ownership", proposedText: "Customer retains ownership of its data. Provider may use aggregated, de-identified data solely to improve the services.", justification: "Customer owns data; Provider keeps narrow de-identified rights." },
+    { id: "se2", type: "replace", targetClauseId: "confidentiality", heading: "7. Confidentiality", proposedText: "Each party will protect the other's Confidential Information for five (5) years following disclosure, and for trade secrets, for as long as they remain trade secrets.", justification: "Extend confidentiality term and protect trade secrets." },
+    { id: "se3", type: "insert", afterClauseId: "confidentiality", heading: "7a. Data Security", proposedText: "Provider will maintain SOC 2 Type II-aligned safeguards and notify Customer of any data breach within seventy-two (72) hours.", justification: "Add a baseline security and breach-notice obligation." },
   ],
 };

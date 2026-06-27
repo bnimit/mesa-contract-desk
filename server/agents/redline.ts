@@ -1,42 +1,26 @@
-import type { Contract, RedlineEdit, Posture } from "../../shared/types.js";
+import type { Contract, RedlineEdit, Department } from "../../shared/types.js";
 import { hasAnthropicKey, runRedlinePrompt } from "../services/claude.js";
 import { CANNED_REDLINES } from "../data/sample-contract.js";
-
-export const POSTURES: { posture: Posture; label: string; role: string }[] = [
-  {
-    posture: "aggressive",
-    label: "Aggressive",
-    role: "You take the most protective possible stance for the Customer. Push hard: cap liability tightly, flip one-sided terms, strip the vendor's data rights, and remove auto-renewal. You would rather over-ask and negotiate back.",
-  },
-  {
-    posture: "balanced",
-    label: "Balanced",
-    role: "You aim for fair, market-standard terms a reasonable counterparty would accept with little friction. Mutual caps, standard carve-outs, sensible security obligations.",
-  },
-  {
-    posture: "minimal",
-    label: "Minimal",
-    role: "You make only the few highest-impact changes needed to make the contract acceptable, leaving everything else untouched to speed signing.",
-  },
-];
+import { getPersona } from "../data/personas.js";
 
 /**
- * Returns structured clause edits for a posture. Uses real Claude when a key
- * is configured; otherwise falls back to canned redlines. On a parse failure,
- * retries once, then falls back to canned so the demo never dead-ends.
+ * Structured clause edits for one department. Real Claude when a key is set,
+ * scoped to the persona's domain; otherwise canned (only the three core
+ * personas have canned redlines). Retries once on parse failure.
  */
-export async function runRedlineAgent(contract: Contract, posture: Posture): Promise<RedlineEdit[]> {
-  const cfg = POSTURES.find((p) => p.posture === posture)!;
+export async function runRedlineAgent(contract: Contract, department: Department): Promise<RedlineEdit[]> {
+  const persona = getPersona(department);
+  const canned = (CANNED_REDLINES as Record<string, RedlineEdit[]>)[department];
   if (!hasAnthropicKey()) {
-    return CANNED_REDLINES[posture];
+    return canned ?? [];
   }
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const edits = await runRedlinePrompt(contract, cfg.role);
+      const edits = await runRedlinePrompt(contract, persona.domain);
       if (edits.length > 0) return edits;
     } catch {
-      // retry once, then fall through to canned
+      // retry once, then fall through
     }
   }
-  return CANNED_REDLINES[posture];
+  return canned ?? [];
 }

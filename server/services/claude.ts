@@ -68,20 +68,19 @@ export function parseRedlineEdits(text: string): RedlineEdit[] {
   })) as RedlineEdit[];
 }
 
-export async function runRedlinePrompt(contract: Contract, role: string): Promise<RedlineEdit[]> {
+export async function runRedlinePrompt(contract: Contract, domain: string): Promise<RedlineEdit[]> {
   const clauseList = contract.clauses
     .map((c) => `[id: ${c.id}] ${c.heading}\n${c.text}`)
     .join("\n\n");
-
   const response = await getClient().messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 2048,
     messages: [
       {
         role: "user",
-        content: `You are a contract attorney. ${role}
+        content: `You are a contract reviewer for the Customer, responsible for: ${domain}.
 
-You are redlining this ${contract.meta.title} on behalf of the Customer. The clauses, each with a stable [id], are:
+Read the whole ${contract.meta.title}, but propose redlines ONLY to clauses that fall within your responsibility (${domain}). Leave all other clauses untouched. The clauses, each with a stable [id], are:
 
 ${clauseList}
 
@@ -89,7 +88,6 @@ ${REDLINE_SCHEMA_HINT}`,
       },
     ],
   });
-
   const text = response.content[0].type === "text" ? response.content[0].text : "";
   return parseRedlineEdits(text);
 }
