@@ -10,7 +10,7 @@ import type {
   RepoTags,
 } from "../../shared/types.js";
 
-const REPO_NAME = "portfolio-advisor";
+const REPO_NAME = "contract-redline";
 const AUTHOR = { name: "Mesa Portfolio Advisor", email: "bot@mesa.dev" };
 
 /**

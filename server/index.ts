@@ -6,7 +6,6 @@ import { initConfigDb, getKey } from "./services/config.js";
 import { reinitializeAnthropic } from "./services/claude.js";
 import { apiRouter } from "./routes/api.js";
 import { sseHandler, emitActivity } from "./routes/events.js";
-import type { Portfolio } from "../shared/types.js";
 
 const app = express();
 const PORT = parseInt(process.env.PORT || "3001", 10);
@@ -26,18 +25,6 @@ app.get("/{*splat}", (_req, res, next) => {
   if (_req.path.startsWith("/api")) return next();
   res.sendFile(path.join(clientDist, "index.html"));
 });
-
-export const DEFAULT_PORTFOLIO: Portfolio = {
-  portfolio: [
-    { ticker: "AAPL", shares: 10, avgCost: 185.5 },
-    { ticker: "NVDA", shares: 5, avgCost: 890.0 },
-    { ticker: "MSFT", shares: 8, avgCost: 410.25 },
-    { ticker: "GOOGL", shares: 12, avgCost: 165.0 },
-    { ticker: "AMZN", shares: 6, avgCost: 195.75 },
-  ],
-  cash: 5000.0,
-  lastUpdated: new Date().toISOString().split("T")[0],
-};
 
 app.post("/api/webhooks/mesa", express.raw({ type: "application/json" }), async (req, res) => {
   const apiKey = getKey("MESA_API_KEY");
@@ -92,13 +79,10 @@ async function start() {
   const mesaKey = getKey("MESA_API_KEY");
   await reinitializeMesa(mesaKey ?? undefined);
 
-  // 4. Seed portfolio if not present
-  try {
-    await getMesa().readFile("main", "portfolio.json");
-  } catch {
-    await getMesa().writeFile("main", "portfolio.json", JSON.stringify(DEFAULT_PORTFOLIO, null, 2));
-    console.log("Initialized default portfolio on main branch");
-  }
+  // 4. Seed contract if not present
+  const { seedContract } = await import("./services/review.js");
+  await seedContract();
+  console.log("Contract seeded on main branch");
 
   app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
