@@ -8,9 +8,9 @@ export function RedlineComparison({ strategies, onPick, busy }: { strategies: Re
         <h2 className="display-heading text-2xl">Pick a redline strategy</h2>
         <span className="font-mono text-xs text-mute">3 agents · isolated branches</span>
       </header>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 border-t border-line items-stretch">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-stretch">
         {strategies.map((s, i) => (
-          <div key={s.posture} className="border-b border-r last:border-r-0 border-line reveal lg:border-b-0 flex" style={{ animationDelay: `${0.2 + i * 0.1}s` }}>
+          <div key={s.posture} className="p-2 reveal flex" style={{ animationDelay: `${0.2 + i * 0.1}s` }}>
             <StrategyCard strategy={s} onPick={() => onPick(s.posture)} busy={busy} />
           </div>
         ))}

@@ -17,7 +17,6 @@ export function HowItWorks() {
               <div className="font-sans text-sm font-semibold mt-2 mb-1">{s.title}</div>
               <p className="text-xs text-mute leading-relaxed">{s.body}</p>
             </div>
-            {i < STEPS.length - 1 && <span className="hidden" />}
           </div>
         ))}
       </div>

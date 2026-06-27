@@ -158,7 +158,7 @@ export function SettingsPanel({
               <button
                 onClick={handleSave}
                 disabled={saving || (!anthropicInput.trim() && !mesaInput.trim())}
-                className="font-mono text-xs uppercase tracking-widest px-4 py-2 bg-ink text-canvas hover:bg-mesa transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="font-mono text-xs uppercase tracking-widest px-4 py-2 bg-mesa text-white rounded-lg hover:bg-[color:var(--color-up)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {saving ? "Saving…" : "Save keys"}
               </button>
@@ -187,7 +187,7 @@ export function SettingsPanel({
               {backends.map((b) => (
                 <li
                   key={b.name}
-                  className={`border p-6 transition-colors ${
+                  className={`border p-6 rounded-xl transition-colors ${
                     b.active
                       ? "border-ink bg-canvas"
                       : b.available
@@ -213,7 +213,7 @@ export function SettingsPanel({
                         await onSwitchBackend(b.name);
                         setSaving(false);
                       }}
-                      className="font-mono text-xs uppercase tracking-widest text-ink border border-line px-3 py-1.5 hover:border-ink hover:bg-ink hover:text-canvas transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-ink"
+                      className="font-mono text-xs uppercase tracking-widest text-ink border border-line px-3 py-1.5 rounded-lg hover:border-ink hover:bg-ink hover:text-canvas transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-ink"
                       title={
                         b.active
                           ? "Already active"

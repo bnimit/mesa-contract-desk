@@ -9,7 +9,7 @@ const POSTURE_META: Record<Posture, { color: string; label: string; sigil: strin
 export function StrategyCard({ strategy, onPick, busy }: { strategy: RedlineStrategy; onPick: () => void; busy: boolean }) {
   const meta = POSTURE_META[strategy.posture];
   return (
-    <article className="bg-canvas border border-line hover:border-ink/30 p-6 flex flex-col w-full transition-colors">
+    <article className="card p-6 hover:shadow-[0_6px_18px_rgba(6,78,59,0.10)] transition-shadow flex flex-col w-full">
       <header className="flex items-center gap-3 mb-4">
         <span className={`text-xl ${meta.color}`}>{meta.sigil}</span>
         <div className="flex-1">
@@ -35,7 +35,7 @@ export function StrategyCard({ strategy, onPick, busy }: { strategy: RedlineStra
       <button
         onClick={onPick}
         disabled={busy}
-        className="group/btn mt-auto w-full flex items-center justify-between gap-3 px-5 py-3 bg-ink text-canvas hover:bg-mesa transition-colors disabled:opacity-40"
+        className="group/btn mt-auto w-full flex items-center justify-between gap-3 px-5 py-3 bg-mesa text-white rounded-lg hover:bg-[color:var(--color-up)] transition-colors disabled:opacity-40"
       >
         <span className="font-mono text-xs tracking-widest uppercase">Take to approval</span>
         <span className="font-mono text-base group-hover/btn:translate-x-1 transition-transform">→</span>

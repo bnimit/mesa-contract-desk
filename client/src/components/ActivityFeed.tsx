@@ -34,7 +34,7 @@ function relativeTime(ts: number): string {
 export function ActivityFeed({ events, connected }: ActivityFeedProps) {
   if (events.length === 0) {
     return (
-      <div className="border border-line p-8 text-center">
+      <div className="card p-8 text-center">
         <p className="serif-quote text-lg text-mute">
           No activity yet. Run an analysis to see Mesa operations stream in.
         </p>
@@ -47,7 +47,7 @@ export function ActivityFeed({ events, connected }: ActivityFeedProps) {
   }
 
   return (
-    <div className="border border-line">
+    <div className="card">
       <div className="px-6 py-3 border-b border-line flex items-center justify-between">
         <div className="section-label">Live operations</div>
         <div className="flex items-center gap-2 font-mono text-xs text-mute">

@@ -1,11 +1,11 @@
 import type { AuditEvent } from "../types.js";
 
-const KIND_META: Record<AuditEvent["kind"], { color: string; label: string }> = {
-  proposed:    { color: "text-mute",         label: "proposed" },
-  approved:    { color: "text-up",           label: "approved" },
-  rejected:    { color: "text-down",         label: "rejected" },
-  rolled_back: { color: "text-mesa",         label: "rolled back" },
-  merged:      { color: "text-fundamentals", label: "merged" },
+const KIND_META: Record<AuditEvent["kind"], { pill: string; label: string }> = {
+  proposed:    { pill: "pill",               label: "proposed" },
+  approved:    { pill: "pill pill-ok",       label: "approved" },
+  rejected:    { pill: "pill pill-bad",      label: "rejected" },
+  rolled_back: { pill: "pill",               label: "rolled back" },
+  merged:      { pill: "pill pill-ok",       label: "merged" },
 };
 
 function rel(ts: number): string {
@@ -18,13 +18,13 @@ function rel(ts: number): string {
 export function AuditTrail({ events }: { events: AuditEvent[] }) {
   if (events.length === 0) {
     return (
-      <div className="border border-line p-8 text-center">
+      <div className="card p-8 text-center">
         <p className="serif-quote text-lg text-mute">No decisions yet. Approvals and rejections appear here, immutably.</p>
       </div>
     );
   }
   return (
-    <div className="border border-line">
+    <div className="card">
       <header className="px-6 py-3 border-b border-line flex items-center justify-between">
         <div>
           <div className="section-label">Audit trail</div>
@@ -37,7 +37,7 @@ export function AuditTrail({ events }: { events: AuditEvent[] }) {
           const meta = KIND_META[e.kind];
           return (
             <div key={e.id} className="px-6 py-3 reveal flex items-baseline gap-4" style={{ animationDelay: `${0.02 * i}s` }}>
-              <span className={`font-mono text-[10px] uppercase tracking-widest w-20 shrink-0 ${meta.color}`}>{meta.label}</span>
+              <span className={`${meta.pill} shrink-0`}>{meta.label}</span>
               <div className="flex-1 min-w-0">
                 <div className="text-sm text-ink truncate">{e.clauseHeading ?? e.justification}</div>
                 <div className="font-mono text-[10px] text-mute mt-0.5">

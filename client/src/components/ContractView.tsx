@@ -2,7 +2,7 @@ import type { Contract } from "../types.js";
 
 export function ContractView({ contract }: { contract: Contract }) {
   return (
-    <div className="border border-line">
+    <div className="card">
       <header className="px-6 py-4 border-b border-line flex items-baseline justify-between">
         <div>
           <div className="display-heading text-xl">{contract.meta.title}</div>
