@@ -112,26 +112,130 @@ export async function pickStrategy(id: number, posture: Posture): Promise<Review
 export async function getActiveReview(): Promise<ReviewState | null> {
   const ptr = await readJson<ActivePointer | null>(MAIN, ACTIVE_FILE, null);
   if (!ptr) return null;
-  const base = await getContract();
+  const fallbackBase = await getContract();
 
   if (ptr.status === "picking") {
     return {
       id: ptr.id, status: "picking", posture: null, branch: null,
-      base, contract: base, pending: [], applied: [], rejected: [], audit: [],
+      base: fallbackBase, contract: fallbackBase, pending: [], applied: [], rejected: [], audit: [],
       strategies: await readStrategies(ptr.id),
     };
   }
 
   // gating
   const branch = reviewBranch(ptr.id);
-  const snapBase = await readJson<Contract>(branch, CONTRACT_FILE, base);
+  const base = await readJson<Contract>(branch, CONTRACT_FILE, fallbackBase);
   const pending = await readJson(branch, "pending.json", []);
   const applied = await readJson(branch, "applied.json", []);
   const rejected = await readJson(branch, "rejected.json", []);
   const audit = await readJson<AuditEvent[]>(branch, "audit.json", []);
   return {
     id: ptr.id, status: "gating", posture: ptr.posture, branch,
-    base: snapBase, contract: applyEdits(snapBase, applied),
+    base, contract: applyEdits(base, applied),
     pending, applied, rejected, audit,
   };
+}
+
+// ── Task 5: Approval Gate Operations ─────────────────────────────────────────
+
+const AUDIT_WORK_FILE = "audit.json";
+
+async function loadGate(id: number) {
+  const branch = reviewBranch(id);
+  const base = await readJson<Contract>(branch, CONTRACT_FILE, await getContract());
+  const pending = await readJson<import("../../shared/types.js").RedlineEdit[]>(branch, "pending.json", []);
+  const applied = await readJson<import("../../shared/types.js").RedlineEdit[]>(branch, "applied.json", []);
+  const rejected = await readJson<import("../../shared/types.js").RedlineEdit[]>(branch, "rejected.json", []);
+  const audit = await readJson<AuditEvent[]>(branch, AUDIT_WORK_FILE, []);
+  return { branch, base, pending, applied, rejected, audit };
+}
+
+async function saveGate(
+  branch: string,
+  base: Contract,
+  pending: import("../../shared/types.js").RedlineEdit[],
+  applied: import("../../shared/types.js").RedlineEdit[],
+  rejected: import("../../shared/types.js").RedlineEdit[],
+  audit: AuditEvent[]
+): Promise<ReviewState> {
+  const contract = applyEdits(base, applied);
+  await writeJson(branch, CONTRACT_FILE, base);
+  await writeJson(branch, "pending.json", pending);
+  await writeJson(branch, "applied.json", applied);
+  await writeJson(branch, "rejected.json", rejected);
+  await writeJson(branch, AUDIT_WORK_FILE, audit);
+  const id = Number(branch.split("/")[1]);
+  const posture = (await readJson<ActivePointer | null>(MAIN, ACTIVE_FILE, null))?.posture ?? null;
+  return { id, status: "gating", posture, branch, base, contract, pending, applied, rejected, audit };
+}
+
+function authorFor(posture: Posture | null): string {
+  return POSTURES.find((p) => p.posture === posture)?.label ?? "agent";
+}
+
+export async function approveNext(id: number, approver: string): Promise<ReviewState> {
+  const g = await loadGate(id);
+  if (g.pending.length === 0) return saveGate(g.branch, g.base, g.pending, g.applied, g.rejected, g.audit);
+  const [edit, ...rest] = g.pending;
+  const applied = [...g.applied, edit];
+  const posture = (await readJson<ActivePointer | null>(MAIN, ACTIVE_FILE, null))?.posture ?? null;
+  const audit = [...g.audit, newAuditEvent({ kind: "approved", editId: edit.id, clauseHeading: edit.heading, author: authorFor(posture), approver, justification: edit.justification })];
+  emitActivity("file_written", `Approved: ${edit.heading ?? edit.targetClauseId}`, { branch: g.branch });
+  return saveGate(g.branch, g.base, rest, applied, g.rejected, audit);
+}
+
+export async function rejectNext(id: number, approver: string): Promise<ReviewState> {
+  const g = await loadGate(id);
+  if (g.pending.length === 0) return saveGate(g.branch, g.base, g.pending, g.applied, g.rejected, g.audit);
+  const [edit, ...rest] = g.pending;
+  const rejected = [...g.rejected, edit];
+  const posture = (await readJson<ActivePointer | null>(MAIN, ACTIVE_FILE, null))?.posture ?? null;
+  const audit = [...g.audit, newAuditEvent({ kind: "rejected", editId: edit.id, clauseHeading: edit.heading, author: authorFor(posture), approver, justification: edit.justification })];
+  emitActivity("file_written", `Rejected: ${edit.heading ?? edit.targetClauseId}`, { branch: g.branch });
+  return saveGate(g.branch, g.base, rest, g.applied, rejected, audit);
+}
+
+export async function rollbackLast(id: number, approver: string): Promise<ReviewState> {
+  const g = await loadGate(id);
+  if (g.applied.length === 0) return saveGate(g.branch, g.base, g.pending, g.applied, g.rejected, g.audit);
+  const applied = g.applied.slice(0, -1);
+  const undone = g.applied[g.applied.length - 1];
+  const audit = [...g.audit, newAuditEvent({ kind: "rolled_back", editId: undone.id, clauseHeading: undone.heading, author: "human reviewer", approver, justification: `Rolled back: ${undone.heading ?? undone.targetClauseId}` })];
+  emitActivity("file_written", `Rolled back: ${undone.heading ?? undone.targetClauseId}`, { branch: g.branch });
+  return saveGate(g.branch, g.base, g.pending, applied, g.rejected, audit);
+}
+
+export async function getAuditTrail(): Promise<AuditEvent[]> {
+  const accumulated = await readJson<AuditEvent[]>(MAIN, AUDIT_LOG_FILE, []);
+  const active = await getActiveReview();
+  const current = active?.status === "gating" ? active.audit : [];
+  return [...current, ...accumulated].sort((a, b) => b.timestamp - a.timestamp);
+}
+
+/** Merge approved edits into main; strip working files; clean up branches. */
+export async function mergeReview(id: number): Promise<Contract> {
+  const g = await loadGate(id);
+  const finalContract = applyEdits(g.base, g.applied);
+  finalContract.meta = {
+    ...finalContract.meta,
+    version: g.base.meta.version + 1,
+    lastApproved: new Date().toISOString(),
+  };
+
+  // Write the approved contract straight onto main (working files never leave the review branch).
+  await writeJson(MAIN, CONTRACT_FILE, finalContract);
+
+  // Accumulate audit onto main's permanent log.
+  const accumulated = await readJson<AuditEvent[]>(MAIN, AUDIT_LOG_FILE, []);
+  const mergedEvent = newAuditEvent({ kind: "merged", author: "human reviewer", justification: `Merged ${g.applied.length} approved edits into v${finalContract.meta.version}` });
+  await writeJson(MAIN, AUDIT_LOG_FILE, [...g.audit, mergedEvent, ...accumulated]);
+
+  emitActivity("branch_merged", `Merged review/${id} → main (v${finalContract.meta.version})`, { branch: reviewBranch(id) });
+
+  // Clean up branches and the active pointer.
+  for (const cfg of POSTURES) await getMesa().deleteBranch(postureBranch(id, cfg.posture));
+  await getMesa().deleteBranch(reviewBranch(id));
+  await getMesa().writeFile(MAIN, ACTIVE_FILE, JSON.stringify(null));
+
+  return finalContract;
 }
