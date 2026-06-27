@@ -5,3 +5,4 @@ dist-server/
 mesa-repo/
 docs/blog/
 .mesa/
+.superpowers/
