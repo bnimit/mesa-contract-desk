@@ -1,76 +1,64 @@
-# Mesa Contract Desk
+# Mesa Contract Review Platform
 
-A demo where three AI attorneys independently redline a contract on separate [Mesa](https://mesa.dev) branches, each using a different negotiation posture. You review their proposals, pick one, and approve or reject each clause through a human-in-the-loop gate. Every decision is preserved immutably in an audit trail.
+A multi-department contract review platform powered by [Mesa](https://mesa.dev) branches. Upload a contract (or use the built-in MSA sample), choose 2–4 department reviewers, watch them redline in parallel on isolated branches, then cherry-pick the best edit per clause and merge to a clean v2 — with a full department audit trail.
 
-Built to showcase how Mesa enables multi-agent workflows with branching, isolation, human approval gates, and audit trails.
+Built to showcase how Mesa enables multi-agent workflows with branching, isolation, cherry-picking, and immutable audit logs.
 
 ## How It Works
 
 ```
-                         ┌─────────────┐
-                         │    main     │
-                         │ contract.json │
-                         └──────┬──────┘
-                                │
-                     ┌──────────┼──────────┐
-                     │          │          │
-                fork │     fork │     fork │
-                     ▼          ▼          ▼
-            ┌──────────┐ ┌──────────┐ ┌──────────┐
-            │Aggressive │ │ Balanced  │ │  Minimal  │
-            │  branch   │ │  branch   │ │  branch   │
-            └─────┬─────┘ └─────┬─────┘ └─────┬─────┘
-                  │             │             │
-           Claude │      Claude │      Claude │
-           Haiku  │      Haiku  │      Haiku  │
-                  ▼             ▼             ▼
-            ┌──────────┐ ┌──────────┐ ┌──────────┐
-            │ Push hard │ │  Fair &   │ │  Highest- │
-            │ flip terms│ │  mutual   │ │  impact   │
-            │ strip data│ │  caps     │ │  only     │
-            └─────┬─────┘ └─────┬─────┘ └─────┬─────┘
-                  │             │             │
-                  └──────┬──────┘──────┬──────┘
-                         │             │
-                  Pick a strategy to review
-                         │
-                  Clause-by-clause approval gate
-                  (approve / reject / roll back)
-                         │
-                         ▼
-                  ┌─────────────┐
-                  │    main     │  ← merged contract
-                  │  audit log  │  ← every decision on record
-                  └─────────────┘
+  ┌───────────────────────┐
+  │  Upload / Sample Pick │  PDF, DOCX, or TXT — or the built-in MSA
+  └───────────┬───────────┘
+              │
+  ┌───────────▼───────────┐
+  │  Choose Reviewers     │  2–4 department personas
+  └───────────┬───────────┘
+              │
+     ┌────────┼────────┐
+     │        │        │
+     ▼        ▼        ▼
+  Legal    Finance  Security  (up to 4 — Commercial, Privacy also available)
+  branch   branch   branch
+     │        │        │
+   Claude  Claude  Claude    ← each with a distinct negotiation posture
+     │        │        │
+     └────────┼────────┘
+              │
+  ┌───────────▼───────────┐
+  │  Cherry-Pick Review   │  Pick the best edit per clause across reviewers
+  └───────────┬───────────┘
+              │
+  ┌───────────▼───────────┐
+  │  Merge to v2          │  Clean contract + department audit trail on main
+  └───────────────────────┘
 ```
 
 ### The Review Cycle
 
-1. **Swarm** — Three attorneys fork the contract on separate Mesa branches, each proposing 2–5 clause edits from their posture
-2. **Pick** — The UI shows all three strategies side-by-side; you choose one to take into approval
-3. **Approval gate** — Each pending edit is presented one at a time; you approve or reject; approved edits accumulate on the contract live
-4. **Rollback** — Any approved edit can be superseded (append-only rollback, not destructive), restoring the previous clause state
-5. **Merge** — Once done, the review branch merges to `main` and the audit log is committed alongside the final contract
-6. **Resume** — The active review is persisted; reload the page and the gate resumes from exact state
+1. **Intake** — Upload a PDF, DOCX, or TXT contract, or select the built-in MSA sample
+2. **Roster** — Choose 2–4 department reviewers; each gets a Mesa branch and a system prompt tuned to their posture
+3. **Parallel redline** — Reviewers work concurrently on isolated branches, proposing edits at the clause level
+4. **Cherry-pick** — For each clause with competing edits, pick the best suggestion (or keep the original)
+5. **Merge** — Accepted edits are merged to `main` to produce a clean v2 alongside a department-labelled audit trail
+6. **Resume** — Active review state is persisted; reload and the cherry-pick session resumes from exact state
 
-### What Mesa Provides
+### Offline / Key Matrix
 
-| Capability | How it's used |
+| Scenario | Anthropic key needed? |
 |---|---|
-| **Branching** | Each attorney works on an isolated branch — no interference between postures |
-| **Resume** | `active-review.json` on `main` tracks the pointer; reloading resumes from exact state |
-| **Rollback** | Append-only supersede — rolled-back edits are logged, not destroyed |
-| **Merge** | Approved contract merges cleanly to `main` with full change history |
-| **Audit trail** | Every approve/reject/rollback event is committed to `audit-log.json` |
-| **History** | Mesa change log preserves every operation for later inspection |
+| Default MSA + Legal, Finance, Security (core-3) | **No** — canned redlines run offline |
+| Any other contract or reviewer combination | **Yes** — live Claude calls |
 
-## Attorney Postures
+### Department Personas
 
-| Posture | Approach | Typical edits |
+| Persona | Focus | Typical edits |
 |---|---|---|
-| **Aggressive** `▲` | Maximum protection for the Customer | Tight liability caps, flip one-sided terms, strip vendor data rights, remove auto-renewal |
-| **Balanced** `◆` | Fair, market-standard terms | Mutual caps, standard carve-outs, sensible security obligations |
-| **Minimal** `●` | Highest-impact changes only | Two or three must-have fixes; leave everything else to speed signing |
+| **Legal** | Contractual risk & liability | Cap limits, indemnity scope, governing law |
+| **Finance** | Payment & cost exposure | Payment terms, audit rights, FX provisions |
+| **Security** | Data & compliance | Data handling, breach notification, security standards |
+| **Commercial** | Deal economics | Pricing, renewal terms, SLA credits |
+| **Privacy** | Data protection & regulatory | GDPR/CCPA obligations, data retention, sub-processors |
 
 ## Quick Start
 
@@ -81,23 +69,21 @@ npm run dev
 
 Open **http://localhost:4000**
 
-On first launch, the app prompts you to add your **Anthropic API key** in the Settings panel. No `.env` file needed — keys are encrypted and stored locally in a SQLite database (`.mesa/config.db`).
+On first launch you can immediately review the default MSA with the three core reviewers — no API key required. To use a custom contract or additional reviewer combinations, add your **Anthropic API key** in the Settings panel. No `.env` file needed — keys are encrypted and stored locally in a SQLite database (`.mesa/config.db`).
 
 Optionally add a **Mesa API key** to switch from the local filesystem backend to Mesa's cloud API (`api.mesa.dev`) for real versioned storage with sub-50ms reads and a full audit trail backed by Mesa's history.
-
-Without an Anthropic key, the demo runs on canned redlines so you can explore the full approval gate flow immediately.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Browser (React + Tailwind)                                 │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────────────┐ │
-│  │ ContractView  │ │ ApprovalGate │ │ Settings Panel       │ │
-│  │ (live clauses)│ │ (edit queue) │ │ keys, backends, tags │ │
-│  └──────┬───────┘ └──────┬───────┘ └──────────┬───────────┘ │
-│         │                │                     │             │
-│  ┌──────┴────────────────┴─────────────────────┴──────────┐  │
+│  ┌──────────────┐ ┌──────────────────┐ ┌──────────────────┐ │
+│  │ IntakePanel  │ │ CherryPickReview │ │ Settings Panel   │ │
+│  │ upload/sample│ │ clause editor    │ │ keys, backends   │ │
+│  └──────┬───────┘ └──────┬───────────┘ └──────┬───────────┘ │
+│         │                │                    │             │
+│  ┌──────┴────────────────┴────────────────────┴──────────┐  │
 │  │  SSE (live activity feed — branch ops, agent progress) │  │
 │  └────────────────────────┬───────────────────────────────┘  │
 └───────────────────────────┼──────────────────────────────────┘
@@ -105,9 +91,9 @@ Without an Anthropic key, the demo runs on canned redlines so you can explore th
 ┌───────────────────────────┼──────────────────────────────────┐
 │  Express Server           │                                  │
 │  ┌────────────────────────┴─────────────────────────────┐    │
-│  │ Routes: contract, review/start|pick|approve|reject|  │    │
-│  │         rollback|merge|active, audit, settings,      │    │
-│  │         reset, changes, repo/tags, webhooks/targets  │    │
+│  │ Routes: intake/upload, review/start|cherry-pick|     │    │
+│  │         merge|active, audit, settings, reset,        │    │
+│  │         changes, repo/tags, webhooks/targets         │    │
 │  └──────────────────────┬───────────────────────────────┘    │
 │                         │                                    │
 │  ┌──────────────────────┼───────────────────────────────┐    │
@@ -119,9 +105,9 @@ Without an Anthropic key, the demo runs on canned redlines so you can explore th
 │  └──────────────────────────────────────────────────────┘    │
 │                                                              │
 │  ┌────────────┐ ┌──────────────────┐ ┌───────────────────┐   │
-│  │ Claude API │ │ Review + Gate    │ │ SQLite config.db   │   │
-│  │ (redlining)│ │ (approve/reject/ │ │ (encrypted keys)   │   │
-│  └────────────┘ │  rollback/merge) │ └───────────────────┘   │
+│  │ Claude API │ │  Review Engine   │ │ SQLite config.db   │   │
+│  │ (redlining)│ │ (cherry-pick /   │ │ (encrypted keys)   │   │
+│  └────────────┘ │  merge / audit)  │ └───────────────────┘   │
 │                 └──────────────────┘                         │
 └──────────────────────────────────────────────────────────────┘
 ```
@@ -143,7 +129,7 @@ How much of the Mesa SDK (`@mesadev/sdk` v0.28.2) this demo exercises:
 | SDK Resource | Methods Used | Where in Demo |
 |---|---|---|
 | **Repos** | `get`, `create`, `delete`, `update` | Init, reset, repo tags |
-| **Bookmarks** | `list`, `create`, `delete`, `move`, `merge` | Fork posture branches, merge review to main |
+| **Bookmarks** | `list`, `create`, `delete`, `move`, `merge` | Fork reviewer branches, merge to main |
 | **Changes** | `list`, `create`, `get` | Write files, audit log, change history |
 | **Content** | `get` (file + directory) | Read contract, read review state |
 | **Diffs** | `get` | Compare redline branch vs main |
@@ -154,16 +140,15 @@ How much of the Mesa SDK (`@mesadev/sdk` v0.28.2) this demo exercises:
 | **fs.mount / bookmark** | `bookmark.list` | List bookmarks via filesystem API |
 | **Org** | `resolveOrg` | Resolve org slug on init |
 | **Auth** | `whoami` | Validate API key, show connection info |
-| API Keys | — | Not used (keys managed outside the demo) |
 
 ## Features
 
-- **Human-in-the-loop approval gate** — clause-by-clause review pauses after each decision; resume from exact state on reload
-- **Immutable audit trail** — every approve, reject, and rollback is appended to `audit-log.json` on the review branch, then committed to `main` at merge
-- **Append-only rollback** — rolled-back edits are superseded in the log, not deleted; the full decision history is always recoverable
-- **Three attorney postures** — Aggressive, Balanced, Minimal — each producing distinct redlines from the same contract
-- **Animated branch visualization** — SVG tree animates through fork → review → merge in real time
-- **Canned fallback** — full demo flow works without an Anthropic key using pre-baked redlines
+- **Multi-department review** — up to 4 department personas redline the same contract concurrently on isolated Mesa branches
+- **Flexible intake** — upload PDF, DOCX, or TXT; or start immediately with the built-in MSA sample
+- **Cherry-pick per clause** — compare all reviewer suggestions side-by-side and choose the best edit for each clause
+- **Offline demo mode** — default MSA + Legal/Finance/Security runs entirely on canned redlines; no Anthropic key needed
+- **Immutable audit trail** — every accepted edit is appended to `audit-log.json` with department and timestamp, committed to `main` at merge
+- **Animated branch visualization** — SVG tree animates through fork → review → cherry-pick → merge in real time
 - **Live activity feed** — SSE-powered stream of every Mesa operation (branch, write, merge)
 - **Three swappable backends** — local filesystem, Mesa REST API, or Mesa fs.mount — switch live in Settings
 - **Webhook target management** — register, list, and delete webhook endpoints from Settings
@@ -173,4 +158,4 @@ How much of the Mesa SDK (`@mesadev/sdk` v0.28.2) this demo exercises:
 
 ## Tech Stack
 
-React, Vite, Tailwind CSS v4, Node.js, Express, Claude Haiku, Mesa SDK, better-sqlite3
+React, Vite, Tailwind CSS v4, Node.js, Express, Claude Haiku, Mesa SDK, better-sqlite3, pdf-parse, mammoth, multer
