@@ -29,33 +29,42 @@ export default function App() {
   const [vizGeneration, setVizGeneration] = useState(0);
   const [vizPhase, setVizPhase] = useState<VizPhase | null>(null);
   const [mergeViz, setMergeViz] = useState(false);
+  const [mergeWinner, setMergeWinner] = useState<string | undefined>(undefined);
+
+  const cap = (p?: string | null) => (p ? p.charAt(0).toUpperCase() + p.slice(1) : undefined);
 
   // Drive the pipeline animation from real workflow state.
   useEffect(() => {
     if (mergeViz) return; // hold merge/complete window
+    if (busy && !review) {
+      const started = mesaEvents.some((e) => e.type === "analysis_started");
+      setVizPhase(started ? "analyze" : "fork");
+      return;
+    }
     if (!review) { setVizPhase(null); return; }
     if (review.status === "picking") {
-      const agentsStarted = mesaEvents.some((e) => e.type === "analysis_started");
-      setVizPhase(agentsStarted ? "analyze" : "fork");
+      const started = mesaEvents.some((e) => e.type === "analysis_started");
+      setVizPhase(started ? "analyze" : "fork");
     } else if (review.status === "gating") {
       setVizPhase("done");
     }
-  }, [review, mesaEvents, mergeViz]);
+  }, [review, busy, mesaEvents, mergeViz]);
 
   useEffect(() => {
     if (busy && review?.status === "picking") setVizGeneration((g) => g + 1);
   }, [busy, review]);
 
   const handleMerge = useCallback(async () => {
+    setMergeWinner(cap(review?.posture));
     setMergeViz(true);
     setVizPhase("merge");
     setTimeout(() => setVizPhase("complete"), 700);
     try {
       await merge();
     } finally {
-      setTimeout(() => { setMergeViz(false); setVizPhase(null); }, 1700);
+      setTimeout(() => { setMergeViz(false); setVizPhase(null); setMergeWinner(undefined); }, 1700);
     }
-  }, [merge]);
+  }, [merge, review]);
 
   const activeBackend = backends.find((b) => b.active);
 
@@ -125,7 +134,7 @@ export default function App() {
         {vizPhase && (
           <section className="mb-8">
             <div className="panel-dark p-5">
-              <BranchVisualization key={vizGeneration} phase={vizPhase} events={mesaEvents} winnerAgent={mergeViz && review?.posture ? review.posture.charAt(0).toUpperCase() + review.posture.slice(1) : undefined} />
+              <BranchVisualization key={vizGeneration} phase={vizPhase} events={mesaEvents} winnerAgent={mergeViz ? mergeWinner : (review?.status === "gating" && review.posture ? cap(review.posture) : undefined)} />
             </div>
           </section>
         )}

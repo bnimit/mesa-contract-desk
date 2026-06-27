@@ -37,7 +37,7 @@ const AGENTS: AgentDef[] = [
     key: "Balanced",
     label: "Balanced",
     sigil: "◆",
-    color: "var(--color-fundamentals)",
+    color: "#34d399",
     y: 130,
     forkDelay: "0.4s",
     path: "M 68,130 C 180,130 260,130 432,130",
@@ -134,7 +134,8 @@ export function BranchVisualization({
         {/* Branch paths */}
         {agentStatuses.map((agent) => {
           const isWinner = winnerAgent === agent.key;
-          const isLoser = showMerge && !isDismiss && !isWinner;
+          const highlightPick = phase === "done" && !!winner;
+          const isLoser = (showMerge && !isDismiss && !isWinner) || (highlightPick && !isWinner);
           const fadeAll = isDismiss;
 
           return (
@@ -188,7 +189,8 @@ export function BranchVisualization({
         {/* Agent nodes */}
         {agentStatuses.map((agent) => {
           const isWinner = winnerAgent === agent.key;
-          const isLoser = showMerge && !isDismiss && !isWinner;
+          const highlightPick = phase === "done" && !!winner;
+          const isLoser = (showMerge && !isDismiss && !isWinner) || (highlightPick && !isWinner);
           const fadeAll = isDismiss;
           const nodeDelay = `${parseFloat(agent.forkDelay) + 0.5}s`;
 
@@ -346,7 +348,7 @@ export function BranchVisualization({
         )}
         {phase === "done" && (
           <p className="section-label fade-in">
-            All branches ready — choose a strategy to merge
+            {winner ? `Reviewing ${winner.label} redlines — approve each clause below` : "All branches ready — choose a strategy to merge"}
           </p>
         )}
         {phase === "merge" && !isDismiss && (

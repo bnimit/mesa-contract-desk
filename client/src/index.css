@@ -54,16 +54,6 @@ body {
   font-feature-settings: "tnum";
 }
 
-.section-number {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-weight: 300;
-  font-size: 7rem;
-  line-height: 0.8;
-  letter-spacing: -0.05em;
-  color: var(--color-mesa);
-}
-
 .section-label {
   font-family: var(--font-mono);
   font-size: 0.7rem;
@@ -176,13 +166,6 @@ body {
 .delay-300 { animation-delay: 0.3s; }
 .delay-400 { animation-delay: 0.4s; }
 .delay-500 { animation-delay: 0.5s; }
-
-.grid-bg {
-  background-image:
-    linear-gradient(to right, rgba(23, 23, 23, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(23, 23, 23, 0.04) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
 
 .diff-added {
   background: #eefbf3;
