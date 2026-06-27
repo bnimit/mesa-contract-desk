@@ -65,7 +65,8 @@ export function useReview(onChange?: () => void) {
   const accept = useCallback(async (decisionId: string, department: Department) => { if (!review) return; setReview(await post("/api/review/accept", { id: review.id, decisionId, department })); }, [review, post]);
   const skip = useCallback(async (decisionId: string) => { if (!review) return; setReview(await post("/api/review/skip", { id: review.id, decisionId })); }, [review, post]);
   const merge = useCallback(async () => { if (!review) return; await post("/api/review/merge", { id: review.id }); setReview(null); onChange?.(); }, [review, post, onChange]);
-  return { review, busy, start, accept, skip, merge, refreshActive };
+  const cancel = useCallback(async () => { await post("/api/review/cancel", {}); setReview(null); onChange?.(); }, [post, onChange]);
+  return { review, busy, start, accept, skip, merge, cancel, refreshActive };
 }
 
 export function useAuditTrail(refreshKey: unknown) {

@@ -99,6 +99,11 @@ apiRouter.post("/review/skip", async (req, res) => {
   } catch (error) { console.error("Skip failed:", error); res.status(500).json({ error: "Skip failed" }); }
 });
 
+apiRouter.post("/review/cancel", async (_req, res) => {
+  try { await clearActiveReview(); res.json({ ok: true }); }
+  catch (error) { console.error("Cancel failed:", error); res.status(500).json({ error: "Cancel failed" }); }
+});
+
 apiRouter.post("/review/merge", async (req, res) => {
   try {
     const { id } = req.body as { id: number };

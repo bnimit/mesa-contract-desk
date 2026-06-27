@@ -20,7 +20,7 @@ export default function App() {
   const { samples } = useSamples();
   const { contract, refresh: refreshContract, loadSample, uploadFile } = useContract(refreshKey);
   const onReviewChange = useCallback(() => { refreshContract(); bump(); }, [refreshContract, bump]);
-  const { review, busy, start, accept, skip, merge } = useReview(onReviewChange);
+  const { review, busy, start, accept, skip, merge, cancel } = useReview(onReviewChange);
   const { events: auditEvents } = useAuditTrail(refreshKey);
   const { targets: webhookTargets, create: createWebhookTarget, remove: deleteWebhookTarget } = useWebhookTargets();
   const { tags: repoTags, update: updateRepoTags } = useRepoTags();
@@ -153,7 +153,16 @@ export default function App() {
         {/* Cherry-pick review — shown when review is active */}
         {review && review.status === "merging" && (
           <section className="mb-8">
-            <div className="section-label mb-3">Review</div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="section-label">Review</div>
+              <button
+                onClick={cancel}
+                disabled={busy}
+                className="font-mono text-[10px] uppercase tracking-widest text-mute hover:text-down border border-line rounded-md hover:border-down/40 px-3 py-1.5 transition-colors disabled:opacity-40"
+              >
+                ← Start over
+              </button>
+            </div>
             <CherryPickReview
               review={review}
               personas={personas}
