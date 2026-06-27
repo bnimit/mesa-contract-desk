@@ -137,10 +137,26 @@ const REDLINE_SCHEMA_HINT = `Respond with ONLY a valid JSON array. Each element 
 ]
 Only use clause ids that appear in the contract. Propose 2-5 edits. No prose outside the JSON.`;
 
+function extractJsonArray(text: string): string {
+  const start = text.indexOf("[");
+  if (start === -1) throw new Error("Agent did not return a JSON array");
+  let depth = 0, inStr = false, esc = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === "\\") esc = true;
+      else if (ch === '"') inStr = false;
+    } else if (ch === '"') inStr = true;
+    else if (ch === "[") depth++;
+    else if (ch === "]") { depth--; if (depth === 0) return text.slice(start, i + 1); }
+  }
+  throw new Error("Agent did not return a complete JSON array");
+}
+
 export function parseRedlineEdits(text: string): RedlineEdit[] {
-  const match = text.match(/\[[\s\S]*\]/);
-  if (!match) throw new Error("Agent did not return a JSON array");
-  const parsed = JSON.parse(match[0]);
+  const json = extractJsonArray(text);
+  const parsed = JSON.parse(json);
   if (!Array.isArray(parsed)) throw new Error("Redline output was not an array");
   return parsed.map((e, i) => ({
     id: typeof e.id === "string" ? e.id : `e${i + 1}`,
