@@ -11,7 +11,7 @@ import type {
 } from "../../shared/types.js";
 
 const REPO_NAME = "contract-redline";
-const AUTHOR = { name: "Mesa Portfolio Advisor", email: "bot@mesa.dev" };
+const AUTHOR = { name: "Mesa Contract Desk", email: "bot@mesa.dev" };
 
 /**
  * Returns true when an SDK error looks like a 404 / NOT_FOUND.

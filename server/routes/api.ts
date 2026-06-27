@@ -59,21 +59,21 @@ apiRouter.post("/review/approve", async (req, res) => {
   try {
     const { id } = req.body as { id: number };
     res.json(await approveNext(id, "you"));
-  } catch { res.status(500).json({ error: "Approve failed" }); }
+  } catch (error) { console.error("Approve failed:", error); res.status(500).json({ error: "Approve failed" }); }
 });
 
 apiRouter.post("/review/reject", async (req, res) => {
   try {
     const { id } = req.body as { id: number };
     res.json(await rejectNext(id, "you"));
-  } catch { res.status(500).json({ error: "Reject failed" }); }
+  } catch (error) { console.error("Reject failed:", error); res.status(500).json({ error: "Reject failed" }); }
 });
 
 apiRouter.post("/review/rollback", async (req, res) => {
   try {
     const { id } = req.body as { id: number };
     res.json(await rollbackLast(id, "you"));
-  } catch { res.status(500).json({ error: "Rollback failed" }); }
+  } catch (error) { console.error("Rollback failed:", error); res.status(500).json({ error: "Rollback failed" }); }
 });
 
 apiRouter.post("/review/merge", async (req, res) => {
@@ -89,13 +89,13 @@ apiRouter.post("/review/merge", async (req, res) => {
 apiRouter.get("/review/active", async (_req, res) => {
   try {
     res.json({ review: await getActiveReview() });
-  } catch { res.status(500).json({ error: "Failed to load active review" }); }
+  } catch (error) { console.error("Load active review failed:", error); res.status(500).json({ error: "Failed to load active review" }); }
 });
 
 apiRouter.get("/audit", async (_req, res) => {
   try {
     res.json({ events: await getAuditTrail() });
-  } catch { res.status(500).json({ error: "Failed to load audit trail" }); }
+  } catch (error) { console.error("Load audit trail failed:", error); res.status(500).json({ error: "Failed to load audit trail" }); }
 });
 
 apiRouter.get("/settings", async (_req, res) => {
