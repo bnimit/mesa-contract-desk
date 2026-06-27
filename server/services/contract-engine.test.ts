@@ -67,6 +67,12 @@ describe("applyEdits", () => {
     const out = applyEdits(base, edits);
     expect(out.clauses).toHaveLength(3);
   });
+
+  it("does not alias base.meta.parties (deep purity)", () => {
+    const out = applyEdits(base, []);
+    out.meta.parties.push("C");
+    expect(base.meta.parties).toHaveLength(2);
+  });
 });
 
 describe("editSummary", () => {

@@ -37,7 +37,7 @@ export function applyEdits(base: Contract, edits: RedlineEdit[]): Contract {
     }
   }
 
-  return { meta: { ...base.meta }, clauses };
+  return { meta: { ...base.meta, parties: [...base.meta.parties] }, clauses };
 }
 
 export function editSummary(edits: RedlineEdit[]): string {
