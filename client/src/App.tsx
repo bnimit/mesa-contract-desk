@@ -50,8 +50,11 @@ export default function App() {
     setMergeViz(true);
     setVizPhase("merge");
     setTimeout(() => setVizPhase("complete"), 700);
-    await merge();
-    setTimeout(() => { setMergeViz(false); setVizPhase(null); }, 1700);
+    try {
+      await merge();
+    } finally {
+      setTimeout(() => { setMergeViz(false); setVizPhase(null); }, 1700);
+    }
   }, [merge]);
 
   const activeBackend = backends.find((b) => b.active);
