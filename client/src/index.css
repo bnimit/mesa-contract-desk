@@ -1,28 +1,28 @@
 @import "tailwindcss";
 
 @theme {
-  --font-display: "Fraunces", "Times New Roman", serif;
-  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "Menlo", monospace;
 
-  --color-canvas: #faf9f5;
-  --color-canvas-2: #f3f1ea;
-  --color-ink: #171717;
-  --color-ink-2: #3d3d3a;
-  --color-mute: #8b8a85;
-  --color-mute-2: #b8b6ae;
-  --color-line: #e3e0d6;
-  --color-line-2: #d0cdc1;
+  --color-canvas: #fbfcfb;
+  --color-canvas-2: #f4f8f5;
+  --color-ink: #0c1512;
+  --color-ink-2: #334e44;
+  --color-mute: #6b827a;
+  --color-mute-2: #9fb3aa;
+  --color-line: #e6ede9;
+  --color-line-2: #d1ddd6;
 
-  --color-mesa: #d4451a;
-  --color-mesa-soft: #f5dccf;
+  --color-mesa: #047857;       /* primary forest green */
+  --color-mesa-soft: #ecfdf5;
 
-  --color-up: #1f6b3f;
-  --color-down: #a02825;
+  --color-up: #166534;         /* added / approve */
+  --color-down: #b91c1c;       /* deleted / reject / aggressive */
 
-  --color-fundamentals: #1f6b3f;
-  --color-sentiment: #d4451a;
-  --color-technical: #7b5b3b;
+  --color-fundamentals: #047857; /* balanced posture */
+  --color-sentiment: #b45309;    /* amber (incidental) */
+  --color-technical: #6b827a;    /* minimal posture (grey) */
 }
 
 * {
@@ -35,34 +35,32 @@ body {
   background: var(--color-canvas);
   color: var(--color-ink);
   font-family: var(--font-sans);
-  font-feature-settings: "ss01", "cv11";
 }
 
 body {
   background-image:
-    radial-gradient(at 0% 0%, rgba(212, 69, 26, 0.03) 0%, transparent 40%),
-    radial-gradient(at 100% 100%, rgba(31, 107, 63, 0.025) 0%, transparent 40%);
+    radial-gradient(at 0% 0%, rgba(4, 120, 87, 0.035) 0%, transparent 38%),
+    radial-gradient(at 100% 100%, rgba(52, 211, 153, 0.04) 0%, transparent 42%);
   background-attachment: fixed;
 }
 
 ::selection {
   background: var(--color-mesa);
-  color: var(--color-canvas);
+  color: #ffffff;
+}
+
+/* Tailwind v4 sets buttons to cursor:default; restore the pointer on
+   anything interactive so selection cards/buttons feel clickable. */
+button:not(:disabled),
+[role="button"]:not(:disabled),
+label[for],
+summary {
+  cursor: pointer;
 }
 
 .tabular {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
-}
-
-.section-number {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-weight: 300;
-  font-size: 7rem;
-  line-height: 0.8;
-  letter-spacing: -0.05em;
-  color: var(--color-mesa);
 }
 
 .section-label {
@@ -75,17 +73,16 @@ body {
 }
 
 .serif-quote {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-weight: 300;
-  letter-spacing: -0.01em;
+  font-family: var(--font-sans);
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: -0.005em;
 }
 
 .display-heading {
   font-family: var(--font-display);
-  font-weight: 400;
+  font-weight: 600;
   letter-spacing: -0.03em;
-  font-variation-settings: "opsz" 144;
 }
 
 .hairline {
@@ -179,19 +176,12 @@ body {
 .delay-400 { animation-delay: 0.4s; }
 .delay-500 { animation-delay: 0.5s; }
 
-.grid-bg {
-  background-image:
-    linear-gradient(to right, rgba(23, 23, 23, 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(23, 23, 23, 0.04) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
-
 .diff-added {
-  background: rgba(31, 107, 63, 0.08);
+  background: #eefbf3;
 }
 
 .diff-deleted {
-  background: rgba(160, 40, 37, 0.08);
+  background: #fdf2f2;
 }
 
 .diff-annotation {
@@ -217,3 +207,28 @@ body {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+.card {
+  border: 1px solid var(--color-line);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(6, 78, 59, 0.06);
+}
+
+.panel-dark {
+  background: #0c1512;
+  border-radius: 14px;
+}
+
+.pill {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding: 2px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.pill-warn { color: #92400e; background: #fef3c7; }
+.pill-ok   { color: #166534; background: #eefbf3; }
+.pill-bad  { color: #991b1b; background: #fdf2f2; }

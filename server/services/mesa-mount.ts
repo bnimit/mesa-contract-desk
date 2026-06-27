@@ -11,7 +11,7 @@ import type {
   RepoTags,
 } from "../../shared/types.js";
 
-const REPO_NAME = "portfolio-advisor";
+const REPO_NAME = "contract-redline";
 
 export class MountedMesa implements MesaService {
   private fs!: MesaFileSystem;

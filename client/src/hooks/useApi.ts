@@ -1,164 +1,85 @@
 import { useState, useEffect, useCallback } from "react";
 import type {
-  PortfolioWithPrices,
-  AnalysisState,
-  HistoryRoundSummary,
   StorageBackend,
-  MesaDiffEntry,
   WebhookTarget,
-  MesaChange,
   RepoTags,
+  Contract,
+  ReviewState,
+  AuditEvent,
+  Persona,
+  Department,
 } from "../types.js";
 
-export function usePortfolio() {
-  const [portfolio, setPortfolio] = useState<PortfolioWithPrices | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/portfolio");
-      setPortfolio(await res.json());
-    } catch {
-      console.error("Failed to fetch portfolio");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-  return { portfolio, loading, refresh };
+export function usePersonas() {
+  const [personas, setPersonas] = useState<Persona[]>([]);
+  useEffect(() => { fetch("/api/personas").then((r) => r.json()).then((d) => setPersonas(d.personas ?? [])).catch(() => {}); }, []);
+  return { personas };
 }
 
-export function useAnalysis(onComplete?: () => void) {
-  const [state, setState] = useState<AnalysisState>({ status: "idle" });
-
-  const analyze = useCallback(async () => {
-    setState({ status: "loading" });
-    try {
-      const res = await fetch("/api/analyze", { method: "POST" });
-      if (!res.ok) throw new Error("Analysis failed");
-      const data = await res.json();
-      let diffs: Record<string, MesaDiffEntry[]> | undefined;
-      if (data.changeIds) {
-        diffs = {};
-        for (const [branch, ids] of Object.entries(data.changeIds as Record<string, { base: string; head: string }>)) {
-          if (ids.base && ids.head) {
-            try {
-              const diffRes = await fetch(`/api/diff?base=${ids.base}&head=${ids.head}`);
-              const diffData = await diffRes.json();
-              if (diffData.diff) diffs[branch] = diffData.diff.entries;
-            } catch { /* skip */ }
-          }
-        }
-      }
-      setState({ status: "done", timestamp: data.timestamp, results: data.results, diffs });
-      onComplete?.();
-    } catch (e) {
-      setState({ status: "error", message: e instanceof Error ? e.message : "Unknown error" });
-    }
-  }, [onComplete]);
-
-  const replay = useCallback(
-    async (from: number) => {
-      setState({ status: "loading" });
-      try {
-        const res = await fetch("/api/replay", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ from }),
-        });
-        if (!res.ok) throw new Error("Replay failed");
-        const data = await res.json();
-        setState({ status: "done", timestamp: data.timestamp, results: data.results, isReplay: true, mergedAgent: data.mergedAgent });
-        onComplete?.();
-      } catch (e) {
-        setState({ status: "error", message: e instanceof Error ? e.message : "Unknown error" });
-      }
-    },
-    [onComplete]
-  );
-
-  const merge = useCallback(
-    async (branch: string, allBranches: string[], agentName?: string) => {
-      setState({ status: "merging", agentName: agentName ?? branch });
-      const res = await fetch("/api/merge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ branch, allBranches }),
-      });
-      if (!res.ok) throw new Error("Merge failed");
-      setState({ status: "idle" });
-      onComplete?.();
-    },
-    [onComplete]
-  );
-
-  const dismiss = useCallback(
-    async (allBranches: string[]) => {
-      setState({ status: "merging", agentName: "all branches" });
-      await fetch("/api/dismiss", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ allBranches }),
-      });
-      setState({ status: "idle" });
-      onComplete?.();
-    },
-    [onComplete]
-  );
-
-  return { state, analyze, replay, merge, dismiss };
+export function useSamples() {
+  const [samples, setSamples] = useState<{ id: string; title: string; cannedAvailable: boolean }[]>([]);
+  useEffect(() => { fetch("/api/samples").then((r) => r.json()).then((d) => setSamples(d.samples ?? [])).catch(() => {}); }, []);
+  return { samples };
 }
 
-export function usePlaybook(refreshKey: unknown) {
-  const [content, setContent] = useState<string>("");
+export function useContract(refreshKey?: unknown) {
+  const [contract, setContract] = useState<Contract | null>(null);
   const [loading, setLoading] = useState(true);
-
   const refresh = useCallback(async () => {
     setLoading(true);
+    try { setContract(await (await fetch("/api/contract")).json()); }
+    catch { /* */ } finally { setLoading(false); }
+  }, []);
+  const loadSample = useCallback(async (id: string) => {
+    const r = await fetch("/api/contract/sample", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    const d = await r.json(); if (r.ok) setContract(d.contract); return d;
+  }, []);
+  const uploadFile = useCallback(async (file: File) => {
+    const fd = new FormData(); fd.append("file", file);
     try {
-      const res = await fetch("/api/playbook");
-      const data = await res.json();
-      setContent(data.content ?? "");
+      const r = await fetch("/api/contract/upload", { method: "POST", body: fd });
+      const d = await r.json().catch(() => ({ error: "Upload failed" }));
+      if (r.ok) { setContract(d.contract); return { ok: true, contract: d.contract }; }
+      return { ok: false, error: d.error };
     } catch {
-      console.error("Failed to fetch playbook");
-    } finally {
-      setLoading(false);
+      return { ok: false, error: "Upload failed" };
     }
   }, []);
-
-  useEffect(() => {
-    refresh();
-  }, [refresh, refreshKey]);
-
-  return { content, loading, refresh };
+  useEffect(() => { refresh(); }, [refresh, refreshKey]);
+  return { contract, loading, refresh, loadSample, uploadFile };
 }
 
-export function useHistory() {
-  const [rounds, setRounds] = useState<HistoryRoundSummary[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/history");
-      const data = await res.json();
-      setRounds(data.rounds ?? []);
-    } catch {
-      console.error("Failed to fetch history");
-    } finally {
-      setLoading(false);
-    }
+export function useReview(onChange?: () => void) {
+  const [review, setReview] = useState<ReviewState | null>(null);
+  const [busy, setBusy] = useState(false);
+  const refreshActive = useCallback(async () => {
+    try { const d = await (await fetch("/api/review/active")).json(); setReview(d.review); } catch { /* */ }
   }, []);
+  useEffect(() => { refreshActive(); }, [refreshActive]);
+  const post = useCallback(async (path: string, body: object) => {
+    setBusy(true);
+    try { const d = await (await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json(); onChange?.(); return d; }
+    finally { setBusy(false); }
+  }, [onChange]);
+  const start = useCallback(async (departments: Department[]) => { setBusy(true); try { const r = await fetch("/api/review/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ departments }) }); const d = await r.json(); if (r.ok) setReview(d); onChange?.(); return d; } finally { setBusy(false); } }, [onChange]);
+  const accept = useCallback(async (decisionId: string, department: Department) => { if (!review) return; setReview(await post("/api/review/accept", { id: review.id, decisionId, department })); }, [review, post]);
+  const skip = useCallback(async (decisionId: string) => { if (!review) return; setReview(await post("/api/review/skip", { id: review.id, decisionId })); }, [review, post]);
+  const merge = useCallback(async () => { if (!review) return; await post("/api/review/merge", { id: review.id }); setReview(null); onChange?.(); }, [review, post, onChange]);
+  const cancel = useCallback(async () => { await post("/api/review/cancel", {}); setReview(null); onChange?.(); }, [post, onChange]);
+  return { review, busy, start, accept, skip, merge, cancel, refreshActive };
+}
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
-
-  return { rounds, loading, refresh };
+export function useAuditTrail(refreshKey: unknown) {
+  const [events, setEvents] = useState<AuditEvent[]>([]);
+  const refresh = useCallback(async () => {
+    try {
+      const res = await fetch("/api/audit");
+      const data = await res.json();
+      setEvents(data.events ?? []);
+    } catch { console.error("Failed to fetch audit"); }
+  }, []);
+  useEffect(() => { refresh(); }, [refresh, refreshKey]);
+  return { events, refresh };
 }
 
 export function useSettings() {
@@ -265,28 +186,6 @@ export function useWebhookTargets() {
   useEffect(() => { refresh(); }, [refresh]);
 
   return { targets, loading, refresh, create, remove };
-}
-
-export function useChanges(refreshKey: unknown) {
-  const [changes, setChanges] = useState<MesaChange[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/changes?limit=30");
-      const data = await res.json();
-      setChanges(data.changes ?? []);
-    } catch {
-      console.error("Failed to fetch changes");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { refresh(); }, [refresh, refreshKey]);
-
-  return { changes, loading, refresh };
 }
 
 export function useRepoTags() {

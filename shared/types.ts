@@ -1,93 +1,9 @@
-export interface Holding {
-  ticker: string;
-  shares: number;
-  avgCost: number;
-}
-
-export interface Portfolio {
-  portfolio: Holding[];
-  cash: number;
-  lastUpdated: string;
-}
-
-export interface TradeAction {
-  ticker: string;
-  action: "buy" | "sell" | "hold";
-  shares: number;
-  reason: string;
-  confidence: "high" | "medium" | "low";
-}
-
-export interface AgentProposal {
-  agentName: string;
-  strategy: string;
-  actions: TradeAction[];
-  proposedPortfolio: Portfolio;
-  reasoning: string;
-  newMarketValue: number;
-  cashBefore: number;
-  cashAfter: number;
-  cashDelta: number;
-  memory?: AgentMemory;
-  playbookEntry?: string;
-}
-
-export interface PlaybookEntry {
-  agent: string;
-  round: number;
-  timestamp: number;
-  body: string;
-  raw: string;
-}
-
-export interface AgentMemory {
-  reviewed: number;
-  correct: number;
-  wrong: number;
-  records: PastPredictionRecord[];
-}
-
-export interface PastPredictionRecord {
-  timestamp: number;
-  ticker: string;
-  action: "buy" | "sell" | "hold";
-  shares: number;
-  priceWhenPredicted: number;
-  currentPrice: number;
-  changePercent: number;
-  outcome: "correct" | "wrong" | "pending";
-}
-
-export interface AgentResult {
-  agentName: string;
-  branch: string;
-  status: "success" | "error";
-  proposal?: AgentProposal;
-  error?: string;
-}
-
-export interface AnalysisRound {
-  timestamp: number;
-  branches: string[];
-  results: AgentResult[];
-  mergedAgent?: string;
-  replayedFrom?: number;
-}
-
 export interface StorageBackend {
   name: string;
   label: string;
   description: string;
   available: boolean;
   active: boolean;
-}
-
-export interface MarketQuote {
-  ticker: string;
-  price: number;
-  change: number;
-  changePercent: number;
-  name: string;
 }
 
 export interface MesaDiffHunk {
@@ -146,3 +62,81 @@ export interface MesaChange {
 
 // ── Repository Tags ──────────────────────────────────────────────────
 export type RepoTags = Record<string, string>;
+
+// ── Contract Redline Workflow ────────────────────────────────────────
+export interface Clause {
+  id: string;        // stable slug, e.g. "liability"
+  heading: string;   // "8. Limitation of Liability"
+  text: string;
+}
+
+export interface ContractMeta {
+  title: string;
+  parties: string[];
+  version: number;
+  lastApproved: string | null; // ISO timestamp
+}
+
+export interface Contract {
+  meta: ContractMeta;
+  clauses: Clause[];
+}
+
+export interface RedlineEdit {
+  id: string;                      // unique within a strategy, e.g. "e1"
+  type: "replace" | "delete" | "insert";
+  targetClauseId?: string;         // replace | delete
+  afterClauseId?: string | null;   // insert position (null = prepend)
+  heading?: string;                // insert | replace (new heading)
+  proposedText?: string;           // replace | insert
+  justification: string;
+}
+
+export interface AuditEvent {
+  id: string;
+  kind: "proposed" | "approved" | "rejected" | "rolled_back" | "merged";
+  editId?: string;
+  clauseHeading?: string;
+  author: string;      // department name or "human reviewer"
+  approver?: string;
+  justification?: string;
+  timestamp: number;
+}
+
+export type Department = "legal" | "finance" | "security" | "commercial" | "privacy";
+
+export interface Persona {
+  id: Department;
+  label: string;
+  domain: string;        // what this reviewer redlines (used in the agent prompt + UI)
+  color: string;         // hex, for cards / branches / audit
+  cannedAvailable: boolean;
+  icon: string;          // emoji for the vantage point (UI only)
+  pitch: string;         // one-line "what they push for" (UI only)
+}
+
+export interface ClauseProposal {
+  department: Department;
+  edit: RedlineEdit;
+}
+
+export interface ClauseDecision {
+  id: string;                          // stable: "dec-{clauseId}" or "dec-ins-{department}-{editId}"
+  kind: "modify" | "insert";
+  targetClauseId?: string;
+  heading: string;
+  originalText: string | null;         // null for insert
+  proposals: ClauseProposal[];
+  acceptedDepartment: Department | null;
+  decided: boolean;
+}
+
+export interface ReviewState {
+  id: number;
+  status: "merging" | "merged";
+  base: Contract;
+  contract: Contract;                  // base ⊕ accepted
+  decisions: ClauseDecision[];
+  departments: Department[];           // who reviewed
+  audit: AuditEvent[];
+}
