@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import { Mesa } from "@mesadev/sdk";
-import { getMesa, reinitializeMesa } from "./services/mesa.js";
 import { initConfigDb, getKey } from "./services/config.js";
 import { reinitializeAnthropic } from "./services/claude.js";
 import { apiRouter } from "./routes/api.js";
@@ -75,18 +74,31 @@ async function start() {
     console.log("No Anthropic key configured — add it in Settings");
   }
 
-  // 3. Restore Mesa backend from stored key
-  const mesaKey = getKey("MESA_API_KEY");
-  await reinitializeMesa(mesaKey ?? undefined);
+  const { activateBackend } = await import("./services/review.js");
 
-  // 4. Seed contract if not present
-  const { seedContract } = await import("./services/review.js");
-  await seedContract();
-  console.log("Contract seeded on main branch");
+  // 3. Come up on the local filesystem backend FIRST. It needs no network,
+  //    so the server is reachable and the demo fully works immediately — even
+  //    if a stored Mesa key is invalid/expired or api.mesa.dev is unreachable.
+  await activateBackend(undefined);
+  console.log("Contract seeded on main branch (local filesystem)");
 
   app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
+
+  // 4. If a Mesa key is stored, upgrade to the real Mesa cloud backend in the
+  //    background. A bad key or cloud hiccup can no longer brick startup — the
+  //    app just stays on local-fs.
+  const mesaKey = getKey("MESA_API_KEY");
+  if (mesaKey) {
+    activateBackend(mesaKey)
+      .then(({ backend, fellBack }) => {
+        console.log(fellBack
+          ? "Mesa key present but cloud backend init failed — staying on local filesystem"
+          : `Upgraded to ${backend} backend (api.mesa.dev)`);
+      })
+      .catch((err) => console.error("Backend upgrade error:", err));
+  }
 }
 
 start().catch(console.error);

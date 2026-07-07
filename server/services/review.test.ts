@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { rm } from "fs/promises";
 import { resolve } from "path";
 import { getMesa } from "./mesa.js";
-import { seedContract, getContract, setContract, startReview, getActiveReview } from "./review.js";
+import { seedContract, getContract, setContract, startReview, getActiveReview, activateBackend } from "./review.js";
 
 async function resetRepo() {
   await rm(resolve("mesa-repo"), { recursive: true, force: true });
@@ -41,5 +41,36 @@ describe("review start & active (local-fs)", () => {
     expect(active!.id).toBe(2000);
     expect(active!.status).toBe("merging");
     expect(active!.decisions.length).toBeGreaterThan(0);
+  });
+});
+
+describe("activateBackend seeding (fresh-backend safety net)", () => {
+  beforeEach(async () => {
+    await rm(resolve("mesa-repo"), { recursive: true, force: true });
+  });
+
+  it("seeds the contract + canned redlines on a fresh backend so reviews aren't empty", async () => {
+    // Simulates switching to a brand-new (empty) repo, e.g. a fresh Mesa cloud
+    // account. Without seeding here, a no-key review yields zero decisions.
+    const { backend, fellBack } = await activateBackend(undefined);
+    expect(backend).toBe("local-fs");
+    expect(fellBack).toBe(false);
+
+    const c = await getContract();
+    expect(c.meta.title).toContain("IT Services Agreement");
+
+    const state = await startReview(3000, ["legal", "finance", "security"]);
+    expect(state.decisions.length).toBeGreaterThan(0); // NOT an empty review
+  });
+
+  it("re-seeds when the contract file is missing from the active branch", async () => {
+    await activateBackend(undefined);
+    // Wipe the seeded state to mimic an unseeded fresh repo, then re-activate.
+    await getMesa().deleteFile("main", "contract.json");
+    await getMesa().deleteFile("main", "canned.json");
+
+    await activateBackend(undefined);
+    const state = await startReview(3001, ["legal", "finance", "security"]);
+    expect(state.decisions.length).toBeGreaterThan(0);
   });
 });

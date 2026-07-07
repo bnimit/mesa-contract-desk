@@ -1,4 +1,4 @@
-import { getMesa } from "./mesa.js";
+import { getMesa, reinitializeMesa, type BackendChoice } from "./mesa.js";
 import { applyEdits, buildDecisions, decisionsToApplied } from "./contract-engine.js";
 import { SAMPLE_CONTRACT, CANNED_REDLINES } from "../data/sample-contract.js";
 import { runRedlineAgent } from "../agents/redline.js";
@@ -37,6 +37,31 @@ export async function seedContract(): Promise<void> {
 }
 export async function getContract(): Promise<Contract> {
   return readJson<Contract>(MAIN, CONTRACT_FILE, SAMPLE_CONTRACT);
+}
+
+/**
+ * Point the app at a storage backend and make sure the demo contract is
+ * seeded on it. Two robustness guarantees the demo depends on:
+ *
+ *  1. **Never bricked by the cloud.** If the Mesa backend can't initialize
+ *     (invalid/expired key, org resolution, network), we fall back to the
+ *     always-working local filesystem backend instead of throwing.
+ *  2. **Never empty on a fresh repo.** Switching to a Mesa cloud backend
+ *     creates a brand-new empty repo; seeding here writes the contract +
+ *     canned redlines so a review isn't empty. `seedContract` is idempotent
+ *     (it no-ops when a contract already exists), so re-seeding is safe.
+ */
+export async function activateBackend(mesaKey?: string, backend?: BackendChoice): Promise<{ backend: string; fellBack: boolean }> {
+  let fellBack = false;
+  try {
+    await reinitializeMesa(mesaKey && mesaKey.length > 0 ? mesaKey : undefined, backend);
+  } catch (err) {
+    console.error("Mesa backend init failed — falling back to local filesystem:", err);
+    await reinitializeMesa(undefined);
+    fellBack = true;
+  }
+  await seedContract();
+  return { backend: getMesa().backendName(), fellBack };
 }
 /** Set the current contract on main, and the canned redlines for the offline path (null for uploads). */
 export async function setContract(c: Contract, canned: CannedSet | null = null): Promise<void> {

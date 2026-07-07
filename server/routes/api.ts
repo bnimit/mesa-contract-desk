@@ -1,14 +1,14 @@
 import { Router } from "express";
 import type express from "express";
 import multer from "multer";
-import { getMesa, reinitializeMesa, type BackendChoice } from "../services/mesa.js";
+import { getMesa, type BackendChoice } from "../services/mesa.js";
 import { hasKey, setKey, deleteKey, getKey } from "../services/config.js";
 import { reinitializeAnthropic, clearAnthropic, hasAnthropicKey, segmentContract } from "../services/claude.js";
 import { emitActivity } from "./events.js";
 import {
   getContract, startReview, acceptEdit, skipDecision,
   mergeReview, getActiveReview, getAuditTrail, clearActiveReview,
-  setContract,
+  setContract, activateBackend,
 } from "../services/review.js";
 import { SAMPLES, getSample, extractText } from "../services/intake.js";
 import { PERSONAS } from "../data/personas.js";
@@ -212,13 +212,16 @@ apiRouter.post("/settings/keys", async (req, res) => {
         return;
       }
       setKey("MESA_API_KEY", mesaKey);
-      await reinitializeMesa(mesaKey, backend);
+      // Switch to the Mesa cloud backend AND seed the (possibly brand-new,
+      // empty) repo so the contract + canned redlines are present. Falls back
+      // to local-fs if cloud init fails, so the demo is never bricked.
+      await activateBackend(mesaKey, backend);
     }
 
     if (backend && !mesaKey) {
       const existingMesaKey = getKey("MESA_API_KEY");
       if (existingMesaKey) {
-        await reinitializeMesa(existingMesaKey, backend);
+        await activateBackend(existingMesaKey, backend);
       }
     }
 
@@ -264,14 +267,14 @@ apiRouter.post("/settings/backend", async (req, res) => {
       return;
     }
     if (backend === "local-fs") {
-      await reinitializeMesa();
+      await activateBackend(undefined);
     } else {
       const mesaKey = getKey("MESA_API_KEY");
       if (!mesaKey) {
         res.status(400).json({ error: "Mesa API key required for this backend" });
         return;
       }
-      await reinitializeMesa(mesaKey, backend);
+      await activateBackend(mesaKey, backend);
     }
     emitActivity("file_written", `Backend switched to ${backend}`);
     res.json({ ok: true, active: getMesa().backendName() });
@@ -285,7 +288,7 @@ apiRouter.delete("/settings/keys", async (_req, res) => {
   try {
     deleteKey("MESA_API_KEY");
     deleteKey("ANTHROPIC_API_KEY");
-    await reinitializeMesa();
+    await activateBackend(undefined);
     clearAnthropic();
     res.json({ ok: true, keys: { mesa: false, anthropic: false } });
   } catch (error) {
