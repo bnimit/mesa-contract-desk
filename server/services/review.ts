@@ -27,12 +27,18 @@ async function readJson<T>(branch: string, path: string, fallback: T): Promise<T
 async function writeJson(branch: string, path: string, value: unknown): Promise<void> {
   await getMesa().writeFile(branch, path, JSON.stringify(value, null, 2));
 }
+/** Write several JSON files to a branch in one shot (single change on the cloud backend). */
+async function writeJsonFiles(branch: string, entries: { path: string; value: unknown }[]): Promise<void> {
+  await getMesa().writeFiles(branch, entries.map((e) => ({ path: e.path, content: JSON.stringify(e.value, null, 2) })));
+}
 
 export async function seedContract(): Promise<void> {
   try { await getMesa().readFile(MAIN, CONTRACT_FILE); }
   catch {
-    await writeJson(MAIN, CONTRACT_FILE, SAMPLE_CONTRACT);
-    await writeJson(MAIN, CANNED_FILE, CANNED_REDLINES);
+    await writeJsonFiles(MAIN, [
+      { path: CONTRACT_FILE, value: SAMPLE_CONTRACT },
+      { path: CANNED_FILE, value: CANNED_REDLINES },
+    ]);
   }
 }
 export async function getContract(): Promise<Contract> {
@@ -65,8 +71,10 @@ export async function activateBackend(mesaKey?: string, backend?: BackendChoice)
 }
 /** Set the current contract on main, and the canned redlines for the offline path (null for uploads). */
 export async function setContract(c: Contract, canned: CannedSet | null = null): Promise<void> {
-  await writeJson(MAIN, CONTRACT_FILE, c);
-  await writeJson(MAIN, CANNED_FILE, canned);
+  await writeJsonFiles(MAIN, [
+    { path: CONTRACT_FILE, value: c },
+    { path: CANNED_FILE, value: canned },
+  ]);
 }
 export function newAuditEvent(e: Omit<AuditEvent, "id" | "timestamp">): AuditEvent {
   return { ...e, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, timestamp: Date.now() };
@@ -127,8 +135,10 @@ async function load(id: number) {
 }
 async function save(id: number, base: Contract, decisions: ClauseDecision[], audit: AuditEvent[], departments: Department[]): Promise<ReviewState> {
   const branch = reviewBranch(id);
-  await writeJson(branch, DECISIONS_FILE, decisions);
-  await writeJson(branch, AUDIT_WORK_FILE, audit);
+  await writeJsonFiles(branch, [
+    { path: DECISIONS_FILE, value: decisions },
+    { path: AUDIT_WORK_FILE, value: audit },
+  ]);
   return { id, status: "merging", base, contract: applyEdits(base, decisionsToApplied(decisions)), decisions, departments, audit };
 }
 async function departmentsOf(id: number): Promise<Department[]> {

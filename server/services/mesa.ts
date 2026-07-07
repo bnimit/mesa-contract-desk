@@ -7,6 +7,10 @@ export interface MesaService {
   init(): Promise<void>;
   readFile(branch: string, filePath: string): Promise<string>;
   writeFile(branch: string, filePath: string, content: string): Promise<void>;
+  /** Write several files to a branch atomically where the backend supports it
+   *  (one Mesa change instead of one per file), so multi-file saves aren't N
+   *  sequential network round-trips. */
+  writeFiles(branch: string, files: { path: string; content: string }[]): Promise<void>;
   deleteFile(branch: string, filePath: string): Promise<void>;
   listFiles(branch: string, dir: string): Promise<string[]>;
   createBranch(branchName: string, fromBranch: string): Promise<void>;
@@ -45,6 +49,10 @@ class LocalFsMesa implements MesaService {
     const fullPath = path.join(this.branchDir(branch), filePath);
     await fs.mkdir(path.dirname(fullPath), { recursive: true });
     await fs.writeFile(fullPath, content, "utf-8");
+  }
+
+  async writeFiles(branch: string, files: { path: string; content: string }[]) {
+    for (const f of files) await this.writeFile(branch, f.path, f.content);
   }
 
   async deleteFile(branch: string, filePath: string) {

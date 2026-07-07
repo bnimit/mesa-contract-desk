@@ -212,10 +212,13 @@ apiRouter.post("/settings/keys", async (req, res) => {
         return;
       }
       setKey("MESA_API_KEY", mesaKey);
-      // Switch to the Mesa cloud backend AND seed the (possibly brand-new,
-      // empty) repo so the contract + canned redlines are present. Falls back
-      // to local-fs if cloud init fails, so the demo is never bricked.
-      await activateBackend(mesaKey, backend);
+      // Do NOT auto-switch to the cloud backend on key save — the demo stays on
+      // the fast local-fs backend by default. The user opts into Mesa cloud
+      // explicitly via the backend selector. Only switch here if the caller
+      // explicitly asked for a cloud backend alongside the key.
+      if (backend && backend !== "local-fs") {
+        await activateBackend(mesaKey, backend);
+      }
     }
 
     if (backend && !mesaKey) {

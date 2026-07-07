@@ -27,6 +27,23 @@ describe("review start & active (local-fs)", () => {
     expect(loaded.meta.title).toBe("Modified Agreement");
   });
 
+  it("writeFiles writes every file in one call", async () => {
+    await getMesa().writeFiles("main", [
+      { path: "a.json", content: JSON.stringify({ a: 1 }) },
+      { path: "b.json", content: JSON.stringify({ b: 2 }) },
+    ]);
+    expect(JSON.parse(await getMesa().readFile("main", "a.json"))).toEqual({ a: 1 });
+    expect(JSON.parse(await getMesa().readFile("main", "b.json"))).toEqual({ b: 2 });
+  });
+
+  it("setContract persists BOTH the contract and its canned redlines", async () => {
+    const c = await getContract();
+    const canned = { legal: [], finance: [], security: [] };
+    await setContract({ ...c, meta: { ...c.meta, title: "Two-file Agreement" } }, canned);
+    expect((await getContract()).meta.title).toBe("Two-file Agreement");
+    expect(JSON.parse(await getMesa().readFile("main", "canned.json"))).toEqual(canned);
+  });
+
   it("startReview returns status merging with decisions", async () => {
     const state = await startReview(1000, ["legal", "finance", "security"]);
     expect(state.status).toBe("merging");

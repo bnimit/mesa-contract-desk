@@ -86,18 +86,13 @@ async function start() {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 
-  // 4. If a Mesa key is stored, upgrade to the real Mesa cloud backend in the
-  //    background. A bad key or cloud hiccup can no longer brick startup — the
-  //    app just stays on local-fs.
-  const mesaKey = getKey("MESA_API_KEY");
-  if (mesaKey) {
-    activateBackend(mesaKey)
-      .then(({ backend, fellBack }) => {
-        console.log(fellBack
-          ? "Mesa key present but cloud backend init failed — staying on local filesystem"
-          : `Upgraded to ${backend} backend (api.mesa.dev)`);
-      })
-      .catch((err) => console.error("Backend upgrade error:", err));
+  // The demo intentionally STAYS on the local filesystem backend at startup —
+  // every action is instant. The real Mesa cloud backend (api.mesa.dev) is
+  // opt-in: the user switches to it explicitly from the Settings backend
+  // selector once a Mesa key is saved. (Cloud writes are network round-trips,
+  // so the local backend keeps the demo snappy by default.)
+  if (getKey("MESA_API_KEY")) {
+    console.log("Mesa key present — switch to the Mesa cloud backend from Settings to run on api.mesa.dev");
   }
 }
 

@@ -143,6 +143,36 @@ export class SdkMesa implements MesaService {
     });
   }
 
+  async writeFiles(
+    branch: string,
+    files: { path: string; content: string }[],
+  ): Promise<void> {
+    if (files.length === 0) return;
+    const changeId = await this.resolveBookmark(branch);
+
+    // One change carrying every file, then a single bookmark move — turns an
+    // N-file save from 3N round-trips into 3, which matters a lot on the
+    // network-backed cloud backend.
+    const change = await this.client.changes.create({
+      repo: REPO_NAME,
+      base_change_id: changeId,
+      message: `write ${files.map((f) => f.path).join(", ")}`,
+      author: AUTHOR,
+      files: files.map((f) => ({
+        path: f.path,
+        content: Buffer.from(f.content, "utf-8").toString("base64"),
+        encoding: "base64",
+        action: "upsert" as const,
+      })),
+    });
+
+    await this.client.bookmarks.move({
+      repo: REPO_NAME,
+      bookmark: branch,
+      change_id: change.id,
+    });
+  }
+
   async deleteFile(branch: string, filePath: string): Promise<void> {
     // Mesa SDK doesn't have a delete content API — overwrite with empty marker
     await this.writeFile(branch, filePath, "");

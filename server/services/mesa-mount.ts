@@ -91,6 +91,19 @@ export class MountedMesa implements MesaService {
     await this.fs.writeFile(this.filePath(filePath), content, "utf-8");
   }
 
+  async writeFiles(branch: string, files: { path: string; content: string }[]): Promise<void> {
+    // Switch once, then write each file within the same branch context.
+    await this.switchTo(branch);
+    for (const f of files) {
+      const dir = f.path.includes("/") ? f.path.substring(0, f.path.lastIndexOf("/")) : null;
+      if (dir) {
+        const dirPath = this.filePath(dir);
+        if (!(await this.fs.exists(dirPath))) await this.fs.mkdir(dirPath, { recursive: true });
+      }
+      await this.fs.writeFile(this.filePath(f.path), f.content, "utf-8");
+    }
+  }
+
   async deleteFile(branch: string, filePath: string): Promise<void> {
     await this.switchTo(branch);
     try {

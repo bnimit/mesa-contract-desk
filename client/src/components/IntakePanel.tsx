@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import type { Persona, Department } from "../types.js";
 
 interface Props {
@@ -16,6 +16,7 @@ interface Props {
 
 export function IntakePanel({ personas, contractTitle, samples, onUpload, onLoadSample, selected, onToggle, hasKey, onRun, busy }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
   const loadedSample = samples.find((s) => s.title === contractTitle);
   const allCore = selected.every((d) => ["legal", "finance", "security"].includes(d));
   const offlineOk = !!loadedSample?.cannedAvailable && allCore;
@@ -45,16 +46,25 @@ export function IntakePanel({ personas, contractTitle, samples, onUpload, onLoad
           <div className="flex flex-col gap-2">
             <div className="text-[11px] text-mute">…or start with a sample</div>
             {samples.map((s) => {
-              const active = contractTitle === s.title;
+              const loading = loadingId === s.id;
+              // Optimistically highlight the card being loaded so the selection
+              // moves the instant it's clicked, even if the backend write is slow.
+              const active = loading || (loadingId === null && contractTitle === s.title);
               return (
                 <button
                   key={s.id}
-                  onClick={() => onLoadSample(s.id)}
-                  className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left transition-colors ${active ? "border-mesa bg-mesa-soft/40" : "border-line hover:border-mesa/50"}`}
+                  disabled={loadingId !== null}
+                  onClick={async () => {
+                    setLoadingId(s.id);
+                    try { await onLoadSample(s.id); } finally { setLoadingId(null); }
+                  }}
+                  className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-left transition-colors disabled:cursor-wait ${active ? "border-mesa bg-mesa-soft/40" : "border-line hover:border-mesa/50"} ${loadingId !== null && !loading ? "opacity-50" : ""}`}
                 >
-                  <span className="text-lg shrink-0">📄</span>
+                  <span className="text-lg shrink-0">{loading ? "⏳" : "📄"}</span>
                   <span className="text-xs font-semibold flex-1">{s.title}</span>
-                  {s.cannedAvailable && <span className="pill pill-ok shrink-0">runs offline</span>}
+                  {loading
+                    ? <span className="pill shrink-0">loading…</span>
+                    : s.cannedAvailable && <span className="pill pill-ok shrink-0">runs offline</span>}
                 </button>
               );
             })}
